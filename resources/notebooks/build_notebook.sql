@@ -573,7 +573,7 @@ UNION ALL SELECT 'population usable', COUNT(*), 183 FROM workspace.default.nyc_p
 UNION ALL SELECT 'ranked zips with population', COUNT(*), 155 FROM workspace.default.zip_service_gap_index WHERE has_enough_data AND has_population
 UNION ALL SELECT 'zip_lookup_v rows', COUNT(*), 227 FROM workspace.default.zip_lookup_v
 UNION ALL SELECT 'borough_metric_shares_v rows', COUNT(*), 25 FROM workspace.default.borough_metric_shares_v
-UNION ALL SELECT 'rats_clean rows', COUNT(*), 50953 FROM workspace.default.rats_clean;
+UNION ALL SELECT 'rats_clean rows', COUNT(*), 50954 FROM workspace.default.rats_clean;
 
 -- COMMAND ----------
 
