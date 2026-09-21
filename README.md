@@ -168,7 +168,7 @@ It prints a link to the run and then status lines. Expect about 4 minutes:
 The job has two steps:
 
 1. **ingest** reads the three CSVs that shipped with the bundle and creates the raw tables. It also creates the `workspace` catalog and `default` schema if they don't exist.
-2. **build** transforms those into five clean tables and the final `zip_service_gap_index` table the dashboard reads.
+2. **build** transforms those into five clean tables, the final `zip_service_gap_index` table, and two views the dashboard reads.
 
 If the last line says `TERMINATED SUCCESS`, you're done with data. If it says `FAILED`, open the run link it printed; the failing step's error is shown there. See [Troubleshooting](#troubleshooting).
 
@@ -186,17 +186,16 @@ The **Sanity checks** cell at the bottom of `build_notebook` shows `actual` vs `
 
 ### Step 7 — Open the dashboard
 
-Click **Dashboards** in the left sidebar and open **[dev <your name>] ZIP Service Gap Index**. Or, from the terminal:
+Click **Dashboards** in the left sidebar and open **[dev <your name>] NYC Service Gap Dashboard**. Or, from the terminal:
 
 ```bash
 databricks bundle open zip_service_gap_index --target dev --var="warehouse_id=$WAREHOUSE_ID"
 ```
 
-You should see:
+The dashboard has two pages:
 
-* A bar chart of average service gap index by borough
-* A table of every NYC ZIP code with complaint, restaurant, and index columns
-* Borough and index-range filters
+* **City overview**: three headline numbers, average service gap index by borough, resident reports vs. restaurant evidence, the monthly share of complaints auto-closed, a borough summary table, a scatter of 311 calls vs. restaurant citations, and the top and bottom 10 ZIPs.
+* **Look up your ZIP**: pick a ZIP code to see its score, rank, the three component measures against a typical ZIP, raw counts, and any data caveats.
 
 If the widgets are blank, click **Refresh** at the top of the dashboard. The SQL warehouse may take a minute to start.
 
@@ -211,7 +210,7 @@ If the widgets are blank, click **Refresh** at the top of the dashboard. The SQL
 | **"Credential was not sent" or "invalid header field value for Authorization"** (Option B) | The token has stray whitespace or line breaks, or wasn't saved. Rerun the `databricks configure` command from Step 2 and paste the token straight from the Databricks UI with nothing extra. Make sure `--token` is typed with two plain hyphens. |
 | **Login window never opens (Option A)** | Your admin may have disabled OAuth. Use Option B in Step 2. |
 | **Deploy fails mentioning `warehouse_id`** | Pass `--var="warehouse_id=<id>"` on the deploy command. The default value in `databricks.yml` is the original author's warehouse and won't exist in your workspace. |
-| **Can't find the `.bundle` folder** | Run `databricks bundle summary --target dev --var="warehouse_id=$WAREHOUSE_ID"` and use the path it prints. In the Workspace browser you can paste that path into the search box. |
+| **Can't find the `.bundle` folder or the notebooks** | The workspace search box doesn't index `.bundle`. Browse to it: **Workspace → Home → .bundle → nyc_service_gap_index → dev → files → resources → notebooks**. Or run `databricks bundle summary --target dev --var="warehouse_id=$WAREHOUSE_ID"` and use the path it prints. In the Workspace browser you can paste that path into the search box. |
 | **Job fails in the `ingest` step with "CSV directory not found"** | Run `databricks bundle summary --target dev --var="warehouse_id=$WAREHOUSE_ID"` and confirm the files were uploaded. If you're running the notebook by hand, set its `data_dir` widget to `/Workspace/Users/<your-email>/.bundle/nyc_service_gap_index/dev/files/resources/data`. |
 | **Job fails immediately mentioning serverless or compute** | Your workspace doesn't have serverless jobs enabled. Ask an admin to enable it, or run the notebooks by hand on a cluster (see the expandable section in Step 6). |
 | **"Catalog workspace does not exist"** or permission error creating it | You need `CREATE CATALOG` permission, or an admin can create the `workspace` catalog and `default` schema for you. See [Using a different catalog or schema](#using-a-different-catalog-or-schema). |
@@ -229,9 +228,9 @@ If the widgets are blank, click **Refresh** at the top of the dashboard. The SQL
 | `resources/data/restaurant_inspections.csv` | NYC DOHMH restaurant inspection records (158,083 rows) |
 | `resources/data/nyc_population_by_zip.csv` | ACS population estimates by ZIP code (231 rows) |
 | `resources/notebooks/ingest_raw_data.py` | Reads the 3 CSVs and creates the raw tables |
-| `resources/notebooks/build_notebook.sql` | SQL that transforms raw tables into clean tables and the final `zip_service_gap_index` |
+| `resources/notebooks/build_notebook.sql` | SQL that transforms raw tables into clean tables, the final `zip_service_gap_index`, and the two views the dashboard uses |
 | `resources/notebooks/key_decisions_notebook.sql` | Documentation notebook: 11 analytical decisions with validation queries |
-| `resources/dashboards/zip_service_gap_index_dashboard.json` | Lakeview dashboard (bar chart plus full ZIP-level table) |
+| `resources/dashboards/zip_service_gap_index_dashboard.json` | The NYC Service Gap Dashboard: two pages, 22 datasets, exported from the source workspace |
 
 ## Data pipeline overview
 
@@ -242,10 +241,10 @@ resources/data/*.csv
   3 raw tables in workspace.default
         │
         ▼  build_tables job, step 2: build_notebook
-  5 clean tables + zip_service_gap_index
+  5 clean tables + zip_service_gap_index + 2 views
         │
         ▼
-  Dashboard reads zip_service_gap_index
+  Dashboard reads zip_service_gap_index, rat_sightings, and the views
 ```
 
 | Raw table (from CSV) | Clean table (build notebook creates) |
@@ -254,6 +253,7 @@ resources/data/*.csv
 | `restaurant_inspections` | `restaurant_violations_clean` → `restaurants_clean` |
 | `nyc_population_by_zip` | `nyc_population_clean` |
 | | **`zip_service_gap_index`** (final output the dashboard reads) |
+| | `zip_lookup_v`, `borough_metric_shares_v` (views on top of the index for the dashboard) |
 
 ---
 
