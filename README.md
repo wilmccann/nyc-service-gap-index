@@ -10,7 +10,7 @@ One team's solution to the **"Is My Block Cursed?"** challenge from the AI Hacka
 
 ![AI Hackathon + Networking NYC, September 18–20, Queens College](docs/hackathon-banner.png)
 
-Built over three days at the **AI Hackathon + Networking NYC** (September 18–20, 2026, Dining Hall at Queens College), hosted by Databricks, the Tech Incubator at Queens College, and WAGMI-Connect.
+Built over two days at the **AI Hackathon + Networking NYC** (September 18–20, 2026, Dining Hall at Queens College), hosted by Databricks, the Tech Incubator at Queens College, and WAGMI-Connect.
 
 **Team:** Will M. and Dylan T.
 
@@ -20,10 +20,10 @@ Built over three days at the **AI Hackathon + Networking NYC** (September 18–2
 
 ### Please read this before judging the code
 
-* **This is one team's solution, and it is imperfect.** It is what two people produced in 2 days, not a reference implementation. Some analytical choices are debatable and some code is rough. The [key decisions notebook](resources/notebooks/key_decisions_notebook.sql) documents the choices we made and why.
+* **This is one team's solution, and it is imperfect.** It is what two people produced in two days, not a reference implementation. Some analytical choices are debatable and some code is rough. The [key decisions notebook](resources/notebooks/key_decisions_notebook.sql) documents the choices we made and why.
 * **Nobody on the team had used Databricks before**, or any similar platform. Everything here was learned during the event. If you spot a better way to do something, you are probably right.
 * **Why this repo exists.** Many hackathon teams built their solution inside one teammate's Databricks account. If you were on such a team, you may have no copy of what you built. This repo lets you stand up a mostly working version of one solution in your own free account in about half an hour, so you have something concrete to explore, take apart, and compare against your own approach.
-* **An invitation.** We all spent three days exploring the same data. If your team shares its solution on GitHub too, everyone gets to learn from more than one attempt. Feel free to fork this, borrow the bundle setup, and replace the analysis with your own.
+* **An invitation.** We all spent two days exploring the same data. If your team shares its solution on GitHub too, everyone gets to learn from more than one attempt. Feel free to fork this, borrow the bundle setup, and replace the analysis with your own.
 
 ---
 
