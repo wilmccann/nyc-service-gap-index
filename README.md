@@ -83,7 +83,7 @@ databricks --version
 
 ### Step 2 — Log the CLI in to your workspace
 
-You'll create a profile named `target`. Replace `<your-workspace-url>` with your workspace address from the terms table above.
+You'll create a profile named `target`. Replace `<your-workspace-url>` with your workspace address from the terms table above. (If you already have a profile called `target` for a different workspace, pick another name and use it everywhere this guide says `target`.)
 
 **Option A — Log in through your browser (recommended, no token needed):**
 
@@ -233,6 +233,7 @@ If the widgets are blank, click **Refresh** at the top of the dashboard. The SQL
 | **`databricks: command not found`** | The CLI isn't installed or isn't on your PATH. Redo Step 1, then close and reopen your terminal. |
 | **`Error: default auth: cannot configure default credentials`** | The CLI doesn't know which profile to use. Run `export DATABRICKS_CONFIG_PROFILE=target` (Step 5), or add `--profile target` to the command. |
 | **"Credential was not sent" or "invalid header field value for Authorization"** (Option B) | The token has stray whitespace or line breaks, or wasn't saved. Rerun the `databricks configure` command from Step 2 and paste the token straight from the Databricks UI with nothing extra. Make sure `--token` is typed with two plain hyphens. |
+| **`--profile "target" has host "..." which conflicts with --host "..."`** | A profile named `target` already exists on this computer and points at a different workspace. Either pick a new name (`--profile mylab`) and use that name in the `export DATABRICKS_CONFIG_PROFILE=` step, or delete the old `[target]` section from `~/.databrickscfg` and rerun the login. |
 | **Login window never opens (Option A)** | Your admin may have disabled OAuth. Use Option B in Step 2. |
 | **Deploy fails mentioning `warehouse_id`** | Pass `--var="warehouse_id=<id>"` on the deploy command. The default value in `databricks.yml` is the original author's warehouse and won't exist in your workspace. |
 | **Can't find the `.bundle` folder or the notebooks** | The workspace search box doesn't index `.bundle`. Browse to it: **Workspace → Home → .bundle → nyc_service_gap_index → dev → files → resources → notebooks**. Or run `databricks bundle summary --target dev --var="warehouse_id=$WAREHOUSE_ID"` and use the path it prints. In the Workspace browser you can paste that path into the search box. |
