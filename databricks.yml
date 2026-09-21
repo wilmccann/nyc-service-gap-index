@@ -50,8 +50,10 @@ resources:
 # ---------------------------------------------------------------------------
 sync:
   include:
+    - ./resources/notebooks/ingest_raw_data.py
     - ./resources/notebooks/build_notebook.py
     - ./resources/notebooks/key_decisions_notebook.py
+    - ./resources/data/*.csv
     - ./resources/dashboards/zip_service_gap_index_dashboard.json
     - ./README.md
 

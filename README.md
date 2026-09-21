@@ -9,7 +9,9 @@ A Databricks Asset Bundle (DAB) that packages the **build notebook**, **key-deci
 | File | Description |
 | --- | --- |
 | `databricks.yml` | Bundle definition — variables, targets, resources |
+| `resources/notebooks/ingest_raw_data.py` | Reads CSVs from `resources/data/` and creates the 3 raw tables |
 | `resources/notebooks/build_notebook.py` | DDL/DML notebook that builds all clean tables and the `zip_service_gap_index` from the 3 raw uploads |
+| `resources/data/*.csv` | Source CSV files (place your 3 CSVs here before deploying) |
 | `resources/notebooks/key_decisions_notebook.py` | Documentation notebook — key analytical decisions with validation queries |
 | `resources/dashboards/zip_service_gap_index_dashboard.json` | Lakeview dashboard (bar chart + full table) |
 
@@ -67,29 +69,32 @@ databricks bundle deploy  --target dev
 ```
 
 This deploys:
-- The **build_tables** job (paused — run it manually after uploading data)
 - The **ZIP Service Gap Index** dashboard
-- Both notebooks to the workspace
+- All three notebooks to the workspace (ingest, build, key decisions)
+- Any CSV files in `resources/data/`
 
 ---
 
-## Upload the raw data
+## Add the raw data
 
-The build notebook expects 3 raw tables in `workspace.default`. Create them by uploading the original CSVs:
+Place the 3 source CSVs in `resources/data/` before deploying (or upload them separately after deploy):
 
-| Table name | CSV source |
-| --- | --- |
-| `workspace.default.rat_sightings` | NYC 311 Rodent Complaints export |
-| `workspace.default.restaurant_inspections` | NYC DOHMH Restaurant Inspections export |
-| `workspace.default.nyc_population_by_zip` | ACS population estimates by ZIP code |
-
-Upload each CSV via the Databricks UI (**Catalog → Create Table → Upload File**) or via:
-```python
-spark.read.csv("/path/to/rat_sightings.csv", header=True, inferSchema=True) \
-  .write.saveAsTable("workspace.default.rat_sightings")
+```
+resources/data/
+├── rat_sightings.csv
+├── restaurant_inspections.csv
+└── nyc_population_by_zip.csv
 ```
 
-Once the raw tables exist, run the **build_tables** job (or open `build_notebook.py` and Run All) to create all clean tables and the final index.
+After deploying, open `ingest_raw_data.py` in the workspace and **Run All**. This reads the CSVs and creates the 3 raw tables (`workspace.default.rat_sightings`, `restaurant_inspections`, `nyc_population_by_zip`).
+
+Then open `build_notebook.py` and **Run All** to create all clean tables and the final `zip_service_gap_index`.
+
+> **Large CSVs?** If the files exceed Git's practical limits, skip committing them and instead upload each CSV via the Databricks UI (**Catalog → Create Table → Upload File**) or:
+> ```python
+> spark.read.csv("/path/to/rat_sightings.csv", header=True, inferSchema=True) \
+>   .write.saveAsTable("workspace.default.rat_sightings")
+> ```
 
 ---
 
@@ -99,7 +104,7 @@ The notebook SQL hardcodes `workspace.default.*`. To use a different catalog/sch
 
 1. **Create matching names** on the target: `CREATE CATALOG workspace; CREATE SCHEMA workspace.default;` — then no code changes are needed.
 
-2. **Find-and-replace** in the notebook files: replace `workspace.default` with your target catalog.schema in `build_notebook.py` and `key_decisions_notebook.py`, and update the dashboard dataset source in `zip_service_gap_index_dashboard.json`.
+2. **Find-and-replace** in the notebook files: replace `workspace.default` with your target catalog.schema in `ingest_raw_data.py`, `build_notebook.py`, `key_decisions_notebook.py`, and update the dashboard dataset source in `zip_service_gap_index_dashboard.json`.
 
 ---
 

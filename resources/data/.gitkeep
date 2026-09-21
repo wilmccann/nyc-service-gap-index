@@ -1,0 +1,14 @@
+# Place the 3 source CSVs in this directory before deploying.
+#
+# Required files and their expected columns:
+#
+# rat_sightings.csv
+#   unique_key, created_date, closed_date, status, descriptor,
+#   location_type, incident_zip, borough, latitude, longitude
+#
+# restaurant_inspections.csv
+#   camis, dba, boro, zipcode, cuisine_description,
+#   inspection_date, score, violation_code, grade
+#
+# nyc_population_by_zip.csv
+#   zip_code, borough, population, margin_of_error
