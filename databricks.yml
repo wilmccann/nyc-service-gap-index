@@ -1,0 +1,72 @@
+# NYC Service Gap Index — Databricks Asset Bundle (DAB)
+# ---------------------------------------------------------------------------
+# Packages the build notebook, key-decisions notebook, and Lakeview dashboard
+# so they can be deployed to another Databricks account.
+#
+# Quick start (on the target account):
+#   1. databricks bundle validate --target dev
+#   2. databricks bundle deploy  --target dev
+#   3. Upload the 3 raw CSVs (see README.md) then open and Run All on
+#      resources/notebooks/build_notebook.py to create the clean tables.
+#
+# Full instructions: README.md
+# ---------------------------------------------------------------------------
+
+bundle:
+  name: nyc_service_gap_index
+
+variables:
+  warehouse_id:
+    description: >-
+      SQL warehouse ID for the dashboard's datasets.
+      Find it in Workspace > SQL Warehouses (copy the ID from the warehouse details page).
+      Override with --var="warehouse_id=<id>" when deploying to another account.
+    default: "dcac6c74800b452a"
+
+targets:
+  dev:
+    mode: development
+    default: true
+
+  prod:
+    mode: production
+
+# ---------------------------------------------------------------------------
+# Resources
+# ---------------------------------------------------------------------------
+resources:
+  # --- Dashboard: ZIP Service Gap Index -----------------------------------
+  dashboards:
+    zip_service_gap_index:
+      display_name: "ZIP Service Gap Index"
+      file_path: ./resources/dashboards/zip_service_gap_index_dashboard.json
+      warehouse_id: ${var.warehouse_id}
+
+# ---------------------------------------------------------------------------
+# Workspace files deployed alongside the resources above.
+# .py files are synced as notebooks you can open and run interactively.
+# After deploy, open build_notebook.py in the workspace and Run All.
+# To schedule the build as a job, uncomment the jobs block above.
+# ---------------------------------------------------------------------------
+sync:
+  include:
+    - ./resources/notebooks/build_notebook.py
+    - ./resources/notebooks/key_decisions_notebook.py
+    - ./resources/dashboards/zip_service_gap_index_dashboard.json
+    - ./README.md
+
+# ---------------------------------------------------------------------------
+# Optional: schedule the build notebook as a job (uncomment to enable)
+# ---------------------------------------------------------------------------
+# Add this under resources: to run the build notebook on a schedule:
+#   jobs:
+#     build_tables:
+#       name: "NYC Service Gap Index — Build Tables"
+#       tasks:
+#         - task_key: build
+#           notebook_task:
+#             notebook_path: ./resources/notebooks/build_notebook.py
+#       schedule:
+#         quartz_cron_expression: "0 0 6 * * ?"
+#         timezone_id: UTC
+#         pause_status: PAUSED
