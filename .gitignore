@@ -8,3 +8,8 @@
 # macOS and Word lock files
 .DS_Store
 ~$*
+
+# The two hackathon CSVs are committed once, in hackathon-materials/ (as provided).
+# scripts/stage_data.sh copies them here for the bundle; don't commit the copies.
+resources/data/rat_sightings.csv
+resources/data/restaurant_inspections.csv

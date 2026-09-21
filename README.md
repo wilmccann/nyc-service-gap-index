@@ -14,7 +14,9 @@ Built over three days at the **AI Hackathon + Networking NYC** (September 18–2
 
 **Team:** Will M. and Dylan T.
 
-**The challenge.** Every team got two public datasets, 311 rodent complaints and restaurant health inspections, and one question: when a New Yorker calls for help, does the city show up? The deliverable was a Service Gap Index for every NYC ZIP code plus a dashboard where anyone can look up their own block. The full participant guide is in [docs/hackathon-brief.md](docs/hackathon-brief.md), and the original handout and raw data files are in [`hackathon-materials/`](hackathon-materials/).
+**The challenge.** Every team got two public datasets, 311 rodent complaints and restaurant health inspections, and one question: when a New Yorker calls for help, does the city show up? The deliverable was a Service Gap Index for every NYC ZIP code plus a dashboard where anyone can look up their own block. The full participant guide is in [docs/hackathon-brief.md](docs/hackathon-brief.md). Everything handed out at the event is kept together in [`hackathon-materials/`](hackathon-materials/): the original Word handout and the two raw CSVs, `rat_sightings.csv` and `restaurant_inspections.csv`, exactly as provided. Those are the only copies of the two files in the repo. A small script, `scripts/stage_data.sh`, copies them into `resources/data/` where the bundle expects them, so a first-time reader can see all the inputs in one place without the data being committed twice.
+
+**A third dataset we added.** The two hackathon files let you count complaints per ZIP, but a raw count mostly measures how many people live there. To make sense of rodent phone calls relative to population, the team pulled in `nyc_population_by_zip.csv` (Census ACS population estimates by ZIP, with margins of error) and committed it in `resources/data/`. It feeds the per-10,000-resident rates and the "quiet ZIP" flag for places where inspectors find rodents but residents rarely call. It was not part of the challenge materials, which is why it doesn't live in `hackathon-materials/`.
 
 **A third dataset we added.** The two hackathon files let you count complaints per ZIP, but a raw count mostly measures how many people live there. To make sense of rodent phone calls *relative to population*, the team pulled in a third file, `nyc_population_by_zip.csv` (Census/ACS population estimates with margins of error, 231 ZIPs), and committed it in [`resources/data/`](resources/data/). It feeds the per-10,000-resident columns and the "quiet ZIP" flag (ZIPs where inspectors find rodents but residents rarely call). It was not part of the challenge materials, which is why it lives with the bundle's data rather than in `hackathon-materials/`.
 
@@ -178,9 +180,10 @@ Resources: 3 created, 0 changed, 0 deleted, 0 unchanged
 
 Everything lands in a folder called `nyc_service_gap_index` in your workspace home (**Workspace → Home → nyc_service_gap_index**). Because `dev` is a development target, the dashboard and job names get a `[dev <your name>]` prefix. That's expected.
 
-Now upload the three CSV files into the volume. This takes about 10 seconds:
+Now copy the two hackathon CSVs next to the population file, then upload all three into the volume. The copy is instant; the upload takes about 10 seconds:
 
 ```bash
+./scripts/stage_data.sh        # Windows PowerShell: .\scripts\stage_data.ps1
 databricks fs cp resources/data dbfs:/Volumes/workspace/default/raw_data --recursive --overwrite
 ```
 
@@ -302,11 +305,12 @@ These screenshots come from a fresh Free Edition account after following the ste
 | `genie/databricks.yml` | A second, tiny bundle holding only the Genie space (see Step 7 for why it's separate) |
 | `genie/nyc_rodent_insights.geniespace.json` | The Genie space export: data sources, instructions, 11 example questions with SQL, 11 benchmark questions |
 | `docs/hackathon-brief.md` | The "Is My Block Cursed?" participant guide, converted to Markdown |
-| `hackathon-materials/` | The original handout (Word) and the two raw CSVs exactly as provided at the event. Not used by the bundle; kept for reference. |
+| `hackathon-materials/` | Everything handed out at the event: the Word handout and the two raw CSVs, exactly as provided. The committed home of the input data. |
+| `scripts/stage_data.sh`, `scripts/stage_data.ps1` | Copies the two CSVs from `hackathon-materials/` into `resources/data/` for the bundle. Run once after cloning (Step 5). |
 | `databricks.yml` | Bundle definition: the `warehouse_id` variable, `dev`/`prod` targets, the `raw_data` volume, the `build_tables` job, the dashboard, and which files to sync |
-| `resources/data/rat_sightings.csv` | NYC 311 rodent complaint records (50,954 rows). Same rows as the hackathon file, with a few unused columns dropped. |
-| `resources/data/restaurant_inspections.csv` | NYC DOHMH restaurant inspection records (158,083 rows). Same rows as the hackathon file, with a few unused columns dropped. |
-| `resources/data/nyc_population_by_zip.csv` | ACS population estimates by ZIP code (231 rows). Not provided at the event; the team downloaded it to turn raw counts into per-capita rates. |
+| `resources/data/rat_sightings.csv` | NYC 311 rodent complaint records (50,954 rows). Not committed here; `scripts/stage_data.sh` copies it from `hackathon-materials/`. |
+| `resources/data/restaurant_inspections.csv` | NYC DOHMH restaurant inspection records (158,083 rows, one per violation). Not committed here; `scripts/stage_data.sh` copies it from `hackathon-materials/`. |
+| `resources/data/nyc_population_by_zip.csv` | The third dataset, added by the team: Census ACS population by ZIP with margin of error (231 rows). Committed here. |
 | `resources/notebooks/ingest_raw_data.py` | Reads the 3 CSVs from the `raw_data` volume and creates the raw tables |
 | `resources/notebooks/build_notebook.sql` | SQL that transforms raw tables into clean tables, the final `zip_service_gap_index`, and the views the dashboard and Genie space use |
 | `resources/notebooks/key_decisions_notebook.sql` | Documentation notebook: 11 analytical decisions with validation queries |
@@ -315,7 +319,10 @@ These screenshots come from a fresh Free Edition account after following the ste
 ## Data pipeline overview
 
 ```
-resources/data/*.csv
+hackathon-materials/*.csv  (the two event files)      resources/data/nyc_population_by_zip.csv  (added by the team)
+        │                                                        │
+        ▼  scripts/stage_data.sh                                 │
+resources/data/*.csv  ◀──────────────────────────────────────────┘
         │
         ▼  databricks fs cp  (you run this once after deploy)
   volume workspace.default.raw_data
@@ -363,7 +370,7 @@ The notebooks and dashboard hardcode `workspace.default`. If you can't use that 
 
 ## Redeploying after changes
 
-If you edit any file in this repo, push the changes with the same deploy command from Step 5, then rerun the job from Step 6. You only need to repeat the `databricks fs cp` upload if the CSVs changed. If you edited the Genie space, rerun the deploy in Step 7.
+If you edit any file in this repo, push the changes with the same deploy command from Step 5, then rerun the job from Step 6. You only need to repeat `scripts/stage_data.sh` and the `databricks fs cp` upload if the CSVs changed. If you edited the Genie space, rerun the deploy in Step 7.
 
 To remove everything the bundles created from your workspace (the tables and the volume's files stay), run both destroys:
 
