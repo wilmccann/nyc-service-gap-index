@@ -306,6 +306,7 @@ These screenshots come from a fresh Free Edition account after following the ste
 | `docs/hackathon-brief.md` | The "Is My Block Cursed?" participant guide, converted to Markdown |
 | `hackathon-materials/` | Everything handed out at the event: the Word handout and the two raw CSVs, exactly as provided. The committed home of the input data. |
 | `scripts/stage_data.sh`, `scripts/stage_data.ps1` | Copies the two CSVs from `hackathon-materials/` into `resources/data/` for the bundle. Run once after cloning (Step 5). |
+| `scripts/teardown.sh` | Removes everything the project created in a workspace so you can start over (see [Starting over](#starting-over)). |
 | `databricks.yml` | Bundle definition: the `warehouse_id` variable, `dev`/`prod` targets, the `raw_data` volume, the `build_tables` job, the dashboard, and which files to sync |
 | `resources/data/rat_sightings.csv` | NYC 311 rodent complaint records (50,954 rows). Not committed here; `scripts/stage_data.sh` copies it from `hackathon-materials/`. |
 | `resources/data/restaurant_inspections.csv` | NYC DOHMH restaurant inspection records (158,083 rows, one per violation). Not committed here; `scripts/stage_data.sh` copies it from `hackathon-materials/`. |
@@ -371,12 +372,15 @@ The notebooks and dashboard hardcode `workspace.default`. If you can't use that 
 
 If you edit any file in this repo, push the changes with the same deploy command from Step 5, then rerun the job from Step 6. You only need to repeat `scripts/stage_data.sh` and the `databricks fs cp` upload if the CSVs changed. If you edited the Genie space, rerun the deploy in Step 7.
 
-To remove everything the bundles created from your workspace (the tables and the volume's files stay), run both destroys:
+## Starting over
+
+To wipe everything this project created in a workspace and run the setup again from Step 5, use the teardown script. It needs the same two environment variables as the deploy commands:
 
 ```bash
-databricks bundle destroy --target dev --var="warehouse_id=$WAREHOUSE_ID"
-cd genie && databricks bundle destroy --target dev --var="warehouse_id=$WAREHOUSE_ID" && cd ..
+./scripts/teardown.sh
 ```
+
+It removes the Genie space, the job, the dashboard, the `raw_data` volume and its files, all 11 tables and views in `workspace.default`, and the project's workspace folders. It leaves your SQL warehouse, the `workspace` catalog, and anything you created yourself. It takes about a minute. (Windows: run it from Git Bash, or run the two `databricks bundle destroy` commands it contains and drop the tables from the SQL Editor.)
 
 ---
 
