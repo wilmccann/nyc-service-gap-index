@@ -14,7 +14,7 @@ Built over three days at the **AI Hackathon + Networking NYC** (September 18–2
 
 **Team:** Will M. and Dylan T.
 
-**The challenge.** Every team got two public datasets, 311 rodent complaints and restaurant health inspections, and one question: when a New Yorker calls for help, does the city show up? The deliverable was a Service Gap Index for every NYC ZIP code plus a dashboard where anyone can look up their own block. The full participant guide is in [docs/hackathon-brief.md](docs/hackathon-brief.md), and the original handout and raw data files are in [`Hackathon Instructions + CSVs/`](Hackathon%20Instructions%20%2B%20CSVs/).
+**The challenge.** Every team got two public datasets, 311 rodent complaints and restaurant health inspections, and one question: when a New Yorker calls for help, does the city show up? The deliverable was a Service Gap Index for every NYC ZIP code plus a dashboard where anyone can look up their own block. The full participant guide is in [docs/hackathon-brief.md](docs/hackathon-brief.md), and the original handout and raw data files are in [`hackathon-materials/`](hackathon-materials/).
 
 ### Please read this before judging the code
 
@@ -164,12 +164,13 @@ databricks bundle deploy   --target dev --var="warehouse_id=$WAREHOUSE_ID"
 
 > `--target dev` selects the `dev` environment defined in `databricks.yml`. It has nothing to do with the profile named `target`.
 
-Deploying takes a minute or two (it uploads about 47 MB of CSV data). When it finishes you'll see:
+Deploying takes a minute or two (it uploads about 47 MB of CSV data). When it finishes you'll see something like this (the two `Created` lines can appear in either order):
 
 ```
-Created dashboards.zip_service_gap_index
 Created jobs.build_tables
-Files: 11 uploaded, 0 deleted
+Created dashboards.zip_service_gap_index
+Files: 10 uploaded, 0 deleted
+Resources: 2 created, 0 changed, 0 deleted, 0 unchanged
 ```
 
 Because `dev` is a development target, everything lands in your personal workspace folder and the dashboard and job names get a `[dev <your name>]` prefix. That's expected.
@@ -250,7 +251,7 @@ If the widgets are blank, click **Refresh** at the top of the dashboard. The SQL
 | File | Description |
 | --- | --- |
 | `docs/hackathon-brief.md` | The "Is My Block Cursed?" participant guide, converted to Markdown |
-| `Hackathon Instructions + CSVs/` | The original handout (Word) and the two raw CSVs exactly as provided at the event. Not used by the bundle; kept for reference. |
+| `hackathon-materials/` | The original handout (Word) and the two raw CSVs exactly as provided at the event. Not used by the bundle; kept for reference. |
 | `databricks.yml` | Bundle definition: the `warehouse_id` variable, `dev`/`prod` targets, the `build_tables` job, the dashboard, and which files to sync |
 | `resources/data/rat_sightings.csv` | NYC 311 rodent complaint records (50,954 rows). Same rows as the hackathon file, with a few unused columns dropped. |
 | `resources/data/restaurant_inspections.csv` | NYC DOHMH restaurant inspection records (158,083 rows). Same rows as the hackathon file, with a few unused columns dropped. |

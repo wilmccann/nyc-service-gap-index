@@ -68,6 +68,11 @@ resources:
 # .py files are synced as notebooks you can also open and run interactively.
 # ---------------------------------------------------------------------------
 sync:
+  # Reference material and repo housekeeping are not needed in the workspace.
+  exclude:
+    - "hackathon-materials/**"
+    - "docs/**"
+    - ".gitignore"
   include:
     - ./resources/notebooks/ingest_raw_data.py
     - ./resources/notebooks/build_notebook.sql

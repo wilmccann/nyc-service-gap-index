@@ -2,7 +2,7 @@
 
 *An NYC Open Data Challenge. Participant Guide.*
 
-> This is a Markdown conversion of the participant guide handed out at the AI Hackathon + Networking NYC (September 18–20, 2026). The original Word document is in [`Hackathon Instructions + CSVs/`](../Hackathon%20Instructions%20%2B%20CSVs/). It is reproduced here so anyone reading this repo understands the problem the project was trying to solve.
+> This is a Markdown conversion of the participant guide handed out at the AI Hackathon + Networking NYC (September 18–20, 2026). The original Word document is in [`hackathon-materials/`](../hackathon-materials/). It is reproduced here so anyone reading this repo understands the problem the project was trying to solve.
 
 ## The question
 
