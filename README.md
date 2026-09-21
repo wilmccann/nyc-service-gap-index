@@ -253,6 +253,28 @@ If the widgets are blank, click **Refresh** at the top of the dashboard. The SQL
 
 ---
 
+## What you'll see when it's done
+
+These screenshots come from a fresh Free Edition account after following the steps above, so this is what success looks like.
+
+**Catalog.** Under **Catalog → workspace → default** you'll find the 3 raw tables, 5 clean tables, the index, 3 views, and the `raw_data` volume holding the CSVs.
+
+![Catalog Explorer showing the tables, views, and raw_data volume](docs/screenshots/catalog-tables.png)
+
+**Dashboard, City overview page.** Headline numbers, the index by borough, resident reports vs. restaurant evidence, the collapse of auto-closing in April 2026, a borough summary, the scatter of 311 calls vs. citations, and the top and bottom 10 ZIPs.
+
+![NYC Service Gap Dashboard, City overview page](docs/screenshots/dashboard-city-overview.png)
+
+**Dashboard, Look up your ZIP page.** Pick a ZIP to see its score and rank, its three measures against a typical ZIP, and the raw counts behind them.
+
+![NYC Service Gap Dashboard, Look up your ZIP page showing ZIP 10025](docs/screenshots/dashboard-lookup-your-zip.png)
+
+**Genie space.** Ask questions in plain English. The space ships with 11 example questions and their SQL, plus 11 benchmark questions you can run from the **Benchmark** tab to check that answers stay accurate over time.
+
+![Genie space answering questions about rodent complaints and quiet ZIP codes](docs/screenshots/genie-agent.png)
+
+---
+
 ## Troubleshooting
 
 | Problem | Fix |
