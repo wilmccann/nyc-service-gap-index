@@ -140,6 +140,7 @@ If the widgets show no data, make sure your SQL warehouse is running.
 
 | Problem | Fix |
 | --- | --- |
+| **"Credential was not sent" or "invalid header field value for Authorization"** | Your token has invalid characters (whitespace, newlines) or wasn't saved. Re-run `databricks configure --profile target --host https://<workspace-url> --token` (note: double-hyphen `--token`, not em-dash). When prompted, copy the token directly from the Databricks UI with no extra spaces or line breaks. |
 | **"Catalog workspace does not exist"** | `ingest_raw_data.py` creates it automatically. If it fails, ensure you have `CREATE CATALOG` permission. |
 | **Dashboard shows no data** | Run `ingest_raw_data.py` then `build_notebook.py` first. The dashboard reads `workspace.default.zip_service_gap_index`, which doesn't exist until both notebooks have run. |
 | **"warehouse_id is required"** | Pass `--var="warehouse_id=<id>"` on the deploy command, or set it in `databricks.yml`. |
