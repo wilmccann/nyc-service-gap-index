@@ -1,6 +1,6 @@
 # NYC Service Gap Index — Databricks Asset Bundle
 
-A self-contained Databricks project that packages the **source data**, **build notebooks**, and **dashboard** for the NYC ZIP Service Gap Index. You copy this repo to your computer, run a few terminal commands, and the dashboard is live. No manual data upload and no clicking around notebooks is needed.
+One team's solution to the **"Is My Block Cursed?"** challenge from the AI Hackathon + Networking NYC, packaged so that anyone with a free Databricks account can recreate it. You copy this repo to your computer, run a few terminal commands, and the tables, notebooks, and dashboard are live in your own workspace. No manual data upload and no clicking around notebooks is needed.
 
 **Time to set up:** about 20–30 minutes the first time. It runs on [Databricks Free Edition](https://www.databricks.com/learn/free-edition), so no paid account is needed.
 
@@ -10,11 +10,18 @@ A self-contained Databricks project that packages the **source data**, **build n
 
 ![AI Hackathon + Networking NYC, September 18–20, Queens College](docs/hackathon-banner.png)
 
-Built at the **AI Hackathon + Networking NYC** (September 18–20, 2026, Dining Hall at Queens College), hosted by Databricks, the Tech Incubator at Queens College, and WAGMI-Connect.
+Built over three days at the **AI Hackathon + Networking NYC** (September 18–20, 2026, Dining Hall at Queens College), hosted by Databricks, the Tech Incubator at Queens College, and WAGMI-Connect.
 
 **Team:** Will M. and Dylan T.
 
-The project asks a simple question: in which NYC ZIP codes do inspectors keep finding rodents while the city's 311 response stays weak? See [Project background](#project-background) for how the index is built.
+**The challenge.** Every team got two public datasets, 311 rodent complaints and restaurant health inspections, and one question: when a New Yorker calls for help, does the city show up? The deliverable was a Service Gap Index for every NYC ZIP code plus a dashboard where anyone can look up their own block. The full participant guide is in [docs/hackathon-brief.md](docs/hackathon-brief.md), and the original handout and raw data files are in [`Hackathon Instructions + CSVs/`](Hackathon%20Instructions%20%2B%20CSVs/).
+
+### Please read this before judging the code
+
+* **This is one team's solution, and it is imperfect.** It is what two people produced in three days, not a reference implementation. Some analytical choices are debatable and some code is rough. The [key decisions notebook](resources/notebooks/key_decisions_notebook.sql) documents the choices we made and why.
+* **Nobody on the team had used Databricks before**, or any similar platform. Everything here was learned during the event. If you spot a better way to do something, you are probably right.
+* **Why this repo exists.** Many hackathon teams built their solution inside one teammate's Databricks account. If you were on such a team, you may have no copy of what you built. This repo lets you stand up a mostly working version of one solution in your own free account in about half an hour, so you have something concrete to explore, take apart, and compare against your own approach.
+* **An invitation.** We all spent three days exploring the same data. If your team shares its solution on GitHub too, everyone gets to learn from more than one attempt. Feel free to fork this, borrow the bundle setup, and replace the analysis with your own.
 
 ---
 
@@ -241,10 +248,12 @@ If the widgets are blank, click **Refresh** at the top of the dashboard. The SQL
 
 | File | Description |
 | --- | --- |
+| `docs/hackathon-brief.md` | The "Is My Block Cursed?" participant guide, converted to Markdown |
+| `Hackathon Instructions + CSVs/` | The original handout (Word) and the two raw CSVs exactly as provided at the event. Not used by the bundle; kept for reference. |
 | `databricks.yml` | Bundle definition: the `warehouse_id` variable, `dev`/`prod` targets, the `build_tables` job, the dashboard, and which files to sync |
-| `resources/data/rat_sightings.csv` | NYC 311 rodent complaint records (50,954 rows) |
-| `resources/data/restaurant_inspections.csv` | NYC DOHMH restaurant inspection records (158,083 rows) |
-| `resources/data/nyc_population_by_zip.csv` | ACS population estimates by ZIP code (231 rows) |
+| `resources/data/rat_sightings.csv` | NYC 311 rodent complaint records (50,954 rows). Same rows as the hackathon file, with a few unused columns dropped. |
+| `resources/data/restaurant_inspections.csv` | NYC DOHMH restaurant inspection records (158,083 rows). Same rows as the hackathon file, with a few unused columns dropped. |
+| `resources/data/nyc_population_by_zip.csv` | ACS population estimates by ZIP code (231 rows). Not provided at the event; the team downloaded it to turn raw counts into per-capita rates. |
 | `resources/notebooks/ingest_raw_data.py` | Reads the 3 CSVs and creates the raw tables |
 | `resources/notebooks/build_notebook.sql` | SQL that transforms raw tables into clean tables, the final `zip_service_gap_index`, and the two views the dashboard uses |
 | `resources/notebooks/key_decisions_notebook.sql` | Documentation notebook: 11 analytical decisions with validation queries |

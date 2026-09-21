@@ -5,3 +5,6 @@
 # Dashboard workspace artifacts (.lvdash.json are imported as dashboard objects,
 # not plain files — use *_dashboard.json for the DAB instead)
 *.lvdash.json
+# macOS and Word lock files
+.DS_Store
+~$*
