@@ -264,6 +264,7 @@ If the widgets are blank, click **Refresh** at the top of the dashboard. The SQL
 | **Job fails immediately mentioning serverless or compute** | Your workspace doesn't have serverless jobs enabled. Ask an admin to enable it, or run the notebooks by hand on a cluster (see the expandable section in Step 6). |
 | **"Catalog workspace does not exist"** or permission error creating it | You need `CREATE CATALOG` permission, or an admin can create the `workspace` catalog and `default` schema for you. See [Using a different catalog or schema](#using-a-different-catalog-or-schema). |
 | **Dashboard shows no data** | The build job must finish first. The dashboard reads `workspace.default.zip_service_gap_index`, which doesn't exist until Step 6 succeeds. |
+| **Genie deploy succeeded but the space isn't on the Genie Agents page** | You're on an old version of the repo that created the space inside the hidden `.bundle` folder. Run `git pull`, then redeploy the Genie bundle (Step 7). It moves into your home folder and appears in the list. |
 | **Genie deploy fails with `Table 'workspace.default.…' does not exist`** | The build job hasn't run yet, or failed. Finish Step 6 first, then rerun the Genie deploy in Step 7. |
 | **Notebook won't run / "no compute attached"** (manual route only) | Use the **Connect** dropdown at the top right of the notebook to pick Serverless or a running cluster. |
 

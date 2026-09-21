@@ -51,6 +51,10 @@ resources:
         - ZIPs with insufficient data are not ranked in the Service Gap Index and only basic counts can be reported.
       warehouse_id: ${var.warehouse_id}
       file_path: ./nyc_rodent_insights.geniespace.json
+      # Create the space in your home folder so it shows up on the Genie
+      # Agents page. Left unset, it lands inside the hidden .bundle folder,
+      # where the UI listing does not look.
+      parent_path: /Workspace/Users/${workspace.current_user.userName}
 
 sync:
   paths: []
