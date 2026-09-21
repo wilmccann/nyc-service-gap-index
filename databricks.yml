@@ -1,15 +1,14 @@
 # NYC Service Gap Index — Databricks Asset Bundle (DAB)
 # ---------------------------------------------------------------------------
-# Packages the build notebook, key-decisions notebook, and Lakeview dashboard
-# so they can be deployed to another Databricks account.
+# Packages the raw CSVs, the ingest + build notebooks, a job that runs them,
+# and the Lakeview dashboard so the whole project can be deployed to any
+# Databricks workspace with three commands:
 #
-# Quick start (on the target account):
-#   1. databricks bundle validate --target dev
-#   2. databricks bundle deploy  --target dev
-#   3. Upload the 3 raw CSVs (see README.md) then open and Run All on
-#      resources/notebooks/build_notebook.py to create the clean tables.
+#   databricks bundle validate --target dev --var="warehouse_id=<id>"
+#   databricks bundle deploy   --target dev --var="warehouse_id=<id>"
+#   databricks bundle run build_tables --target dev --var="warehouse_id=<id>"
 #
-# Full instructions: README.md
+# Full step-by-step instructions: README.md
 # ---------------------------------------------------------------------------
 
 bundle:
@@ -18,10 +17,9 @@ bundle:
 variables:
   warehouse_id:
     description: >-
-      SQL warehouse ID for the dashboard's datasets.
-      Find it in Workspace > SQL Warehouses (copy the ID from the warehouse details page).
-      Override with --var="warehouse_id=<id>" when deploying to another account.
-    default: "dcac6c74800b452a"
+      ID of the SQL warehouse the dashboard should query. There is no default
+      on purpose: every workspace has different warehouses. Find yours with
+      `databricks warehouses list` and pass it as --var="warehouse_id=<id>".
 
 targets:
   dev:
@@ -35,6 +33,29 @@ targets:
 # Resources
 # ---------------------------------------------------------------------------
 resources:
+  # --- Job: ingest the CSVs, then build the clean tables and the index ----
+  # Runs on serverless compute (no cluster configuration needed).
+  # Trigger it with: databricks bundle run build_tables --target dev
+  jobs:
+    build_tables:
+      name: "NYC Service Gap Index - Build Tables"
+      tasks:
+        - task_key: ingest
+          notebook_task:
+            notebook_path: ./resources/notebooks/ingest_raw_data.py
+            base_parameters:
+              data_dir: ${workspace.file_path}/resources/data
+        - task_key: build
+          depends_on:
+            - task_key: ingest
+          notebook_task:
+            notebook_path: ./resources/notebooks/build_notebook.sql
+      # Optional: uncomment to rebuild every day at 06:00 UTC.
+      # schedule:
+      #   quartz_cron_expression: "0 0 6 * * ?"
+      #   timezone_id: UTC
+      #   pause_status: PAUSED
+
   # --- Dashboard: ZIP Service Gap Index -----------------------------------
   dashboards:
     zip_service_gap_index:
@@ -44,31 +65,13 @@ resources:
 
 # ---------------------------------------------------------------------------
 # Workspace files deployed alongside the resources above.
-# .py files are synced as notebooks you can open and run interactively.
-# After deploy, open build_notebook.py in the workspace and Run All.
-# To schedule the build as a job, uncomment the jobs block above.
+# .py files are synced as notebooks you can also open and run interactively.
 # ---------------------------------------------------------------------------
 sync:
   include:
     - ./resources/notebooks/ingest_raw_data.py
-    - ./resources/notebooks/build_notebook.py
-    - ./resources/notebooks/key_decisions_notebook.py
+    - ./resources/notebooks/build_notebook.sql
+    - ./resources/notebooks/key_decisions_notebook.sql
     - ./resources/data/*.csv
     - ./resources/dashboards/zip_service_gap_index_dashboard.json
     - ./README.md
-
-# ---------------------------------------------------------------------------
-# Optional: schedule the build notebook as a job (uncomment to enable)
-# ---------------------------------------------------------------------------
-# Add this under resources: to run the build notebook on a schedule:
-#   jobs:
-#     build_tables:
-#       name: "NYC Service Gap Index — Build Tables"
-#       tasks:
-#         - task_key: build
-#           notebook_task:
-#             notebook_path: ./resources/notebooks/build_notebook.py
-#       schedule:
-#         quartz_cron_expression: "0 0 6 * * ?"
-#         timezone_id: UTC
-#         pause_status: PAUSED

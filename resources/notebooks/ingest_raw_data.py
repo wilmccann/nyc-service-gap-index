@@ -3,7 +3,7 @@
 # MAGIC %md
 # MAGIC # Ingest Raw Data
 # MAGIC
-# MAGIC Reads the 3 source CSVs from the bundle's `resources/data/` directory and creates the raw tables that `build_notebook.py` expects.
+# MAGIC Reads the 3 source CSVs from the bundle's `resources/data/` directory and creates the raw tables that `build_notebook.sql` expects.
 # MAGIC
 # MAGIC | CSV file | Table created |
 # MAGIC | --- | --- |
@@ -11,34 +11,32 @@
 # MAGIC | `restaurant_inspections.csv` | `workspace.default.restaurant_inspections` |
 # MAGIC | `nyc_population_by_zip.csv` | `workspace.default.nyc_population_by_zip` |
 # MAGIC
-# MAGIC Run this notebook **before** `build_notebook.py`.
+# MAGIC Run this notebook **before** `build_notebook.sql`.
 
 # COMMAND ----------
 
 # DBTITLE 1,Setup
 import os
 
-# Widget: override the CSV directory if your data lives elsewhere
+# Widget: directory containing the 3 CSV files.
+# When run as the bundle's build_tables job, databricks.yml fills this in.
+# When run interactively, leave it blank and it is derived from this
+# notebook's location (resources/notebooks -> resources/data).
 dbutils.widgets.text("data_dir", "", "Directory containing the 3 CSV files")
 
-# Auto-derive data_dir from this notebook's path if the widget is blank
-data_dir = dbutils.widgets.get("data_dir")
+data_dir = dbutils.widgets.get("data_dir").strip()
 if not data_dir:
-    notebook_path = dbutils.notebook.getContext().notebookPath().get()
-    parts = notebook_path.split("/")
-    if "resources" in parts:
-        idx = parts.index("resources")
-        bundle_root = "/".join(parts[:idx])
-        data_dir = f"/Workspace{bundle_root}/resources/data"
-    else:
-        data_dir = "/Workspace/resources/data"
+    data_dir = os.path.normpath(os.path.join(os.getcwd(), "..", "data"))
 
 print(f"Reading CSVs from: {data_dir}")
 if os.path.exists(data_dir):
     print(f"Files found: {os.listdir(data_dir)}")
 else:
-    print("⚠ Directory not found. Set the data_dir widget to the correct path.")
-    dbutils.notebook.exit("data_dir not found")
+    raise FileNotFoundError(
+        f"CSV directory not found: {data_dir}\n"
+        "Set the data_dir widget to the deployed resources/data folder, e.g. "
+        "/Workspace/Users/<your-email>/.bundle/nyc_service_gap_index/dev/files/resources/data"
+    )
 
 # COMMAND ----------
 
@@ -108,7 +106,7 @@ for t in tables:
     cols = len(spark.table(t).columns)
     print(f"  {t}: {count:,} rows, {cols} columns")
 
-print("\n✓ All raw tables ready. Now run build_notebook.py to create the clean tables.")
+print("\n✓ All raw tables ready. Now run build_notebook.sql to create the clean tables.")
 
 # COMMAND ----------
 

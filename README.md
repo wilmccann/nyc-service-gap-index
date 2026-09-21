@@ -1,138 +1,204 @@
 # NYC Service Gap Index — Databricks Asset Bundle
 
-A self-contained Databricks Asset Bundle (DAB) that packages the **source data**, **build notebooks**, and **Lakeview dashboard** for the NYC ZIP Service Gap Index project. Clone the repo, deploy the bundle, run two notebooks, and the dashboard is live — no manual data upload required.
+A self-contained Databricks project that packages the **source data**, **build notebooks**, and **dashboard** for the NYC ZIP Service Gap Index. You copy this repo to your computer, run a few terminal commands, and the dashboard is live. No manual data upload and no clicking around notebooks is needed.
+
+**Time to set up:** about 20–30 minutes the first time.
 
 ---
 
-## What's included
+## Before you start: a few terms
 
-| File | Description |
+If you've never set up a Databricks project before, these are the only concepts you need:
+
+| Term | What it means here |
 | --- | --- |
-| `databricks.yml` | Bundle definition — variables, targets, dashboard resource, sync rules |
-| `resources/data/rat_sightings.csv` | NYC 311 rodent complaint records (50,954 rows) |
-| `resources/data/restaurant_inspections.csv` | NYC DOHMH restaurant inspection records (158,083 rows) |
-| `resources/data/nyc_population_by_zip.csv` | ACS population estimates by ZIP code (231 rows) |
-| `resources/notebooks/ingest_raw_data.py` | Reads the 3 CSVs and creates the raw Databricks tables |
-| `resources/notebooks/build_notebook.py` | DDL/DML that transforms raw tables into clean tables + the final `zip_service_gap_index` |
-| `resources/notebooks/key_decisions_notebook.py` | Documentation notebook — 11 analytical decisions with validation queries |
-| `resources/dashboards/zip_service_gap_index_dashboard.json` | Lakeview dashboard (bar chart + full ZIP-level table) |
-
-## Data pipeline overview
-
-```
-resources/data/*.csv
-        │
-        ▼  (ingest_raw_data.py — Run All)
-  3 raw tables in workspace.default
-        │
-        ▼  (build_notebook.py — Run All)
-  5 clean tables + zip_service_gap_index
-        │
-        ▼
-  Lakeview dashboard reads zip_service_gap_index
-```
-
-| Raw table (created from CSV) | Clean table (build notebook creates) |
-| --- | --- |
-| `rat_sightings` | `rodent_complaints_clean` |
-| `restaurant_inspections` | `restaurant_violations_clean` → `restaurants_clean` |
-| `nyc_population_by_zip` | `nyc_population_clean` |
-| | **`zip_service_gap_index`** (final output the dashboard reads) |
-
-All tables use the catalog/schema `workspace.default` by default. To use a different catalog/schema, see [Updating catalog & schema](#updating-catalog--schema) below.
+| **Workspace** | Your Databricks account's website. Its address looks like `https://dbc-a1b2c3d4-e5f6.cloud.databricks.com` (AWS), `https://adb-1234567890123456.7.azuredatabricks.net` (Azure), or `https://1234567890123456.7.gcp.databricks.com` (GCP). Copy it from your browser's address bar after logging in, keeping only the part up to the domain. |
+| **Databricks CLI** | A small program you install on your computer. It lets you push files to your workspace from a terminal instead of uploading them by hand. |
+| **Profile** | A saved login for the CLI. You give it a name (this guide uses `target`) and it remembers which workspace to talk to and how to authenticate. |
+| **Asset bundle** | This repo. The file `databricks.yml` is a packing list that tells the CLI what to send to your workspace and where. |
+| **Bundle target** | An environment defined in `databricks.yml`. This repo defines `dev` and `prod`. You will use `dev`. This is **not** the same thing as the profile named `target`; the name overlap is unfortunate. |
+| **Job** | A saved, runnable task in Databricks. This bundle defines one job, `build_tables`, that loads the CSVs and builds every table. You'll trigger it from the terminal. |
+| **SQL warehouse** | The compute that runs the dashboard's queries. The dashboard needs to know which one to use, so you'll copy its ID. |
+| **Catalog / schema** | Where tables live, written as `catalog.schema.table`. Everything here uses `workspace.default`. |
 
 ---
 
-## Quick start (for a new user on the target account)
+## Quick start
 
-### Prerequisites
+### Step 1 — Install the Databricks CLI
 
-* A Databricks workspace with **serverless compute** enabled (or an attached cluster)
-* Permission to create catalogs and schemas in Unity Catalog
-* A SQL warehouse (any size — the dashboard needs it; the notebooks use serverless compute)
+Pick the command for your operating system and run it in a terminal.
 
-### Step 1 — Install and authenticate the Databricks CLI
+**macOS (Homebrew):**
 
 ```bash
-pip install databricks-sdk
-# or: brew install databricks
+brew tap databricks/tap
+brew install databricks
 ```
 
-Authenticate with a profile for the **target** workspace:
+**Windows (PowerShell):**
 
-```bash
-databricks configure --profile target --host https://<target-workspace-url> --token
+```powershell
+winget install Databricks.DatabricksCLI
 ```
 
-### Step 2 — Clone the repo into a Databricks Git folder
-
-The bundle root must live inside a **Git folder** in the Databricks workspace. You can either:
-
-* **In the Databricks UI:** Workspace → Repos → Add → clone your Git repo, or
-* **Via CLI:**
+**Linux, or macOS without Homebrew:**
 
 ```bash
-git clone <your-repo-url> nyc-service-gap-index
+curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+```
+
+Confirm it worked. You should see a version number:
+
+```bash
+databricks --version
+```
+
+> **Do not** use `pip install databricks-cli` or `pip install databricks-sdk`. Those install different, older tools that will not work with this guide.
+
+### Step 2 — Log the CLI in to your workspace
+
+You'll create a profile named `target`. Replace `<your-workspace-url>` with your workspace address from the terms table above.
+
+**Option A — Log in through your browser (recommended, no token needed):**
+
+```bash
+databricks auth login --host <your-workspace-url> --profile target
+```
+
+A browser window opens. Sign in to Databricks and approve the request. Come back to the terminal when it says login succeeded.
+
+**Option B — Use a personal access token** (if Option A is blocked by your admin):
+
+1. In Databricks, click your profile icon (top right) → **Settings** → **Developer** → **Access tokens** → **Manage** → **Generate new token**.
+2. Give it a comment like `cli` and click **Generate**. Copy the token now; you can't see it again.
+3. Run this and paste the token when prompted:
+
+   ```bash
+   databricks configure --profile target --host <your-workspace-url> --token
+   ```
+
+Either way, confirm the login works:
+
+```bash
+databricks current-user me --profile target
+```
+
+If you see your name and email in the output, you're authenticated.
+
+### Step 3 — Copy this repo to your computer
+
+```bash
+git clone <this-repo-url> nyc-service-gap-index
 cd nyc-service-gap-index
 ```
 
-### Step 3 — Find your SQL warehouse ID
+Run every remaining command from inside this folder.
 
-The dashboard requires a SQL warehouse. Find its ID in the Databricks UI:
+### Step 4 — Find your SQL warehouse ID
 
-**Workspace → SQL Warehouses** → click your warehouse → copy the ID (e.g. `dcac6c74800b452a`).
-
-If you don't have one, create a 2X-Small Serverless warehouse — that's enough for this dashboard.
-
-### Step 4 — Validate and deploy the bundle
+The dashboard needs a SQL warehouse to run its queries. List the ones in your workspace:
 
 ```bash
-# Use the profile you created in Step 1
-export DATABRICKS_CONFIG_PROFILE=target
-
-databricks bundle validate --target dev
-databricks bundle deploy  --target dev --var="warehouse_id=<your-warehouse-id>"
+databricks warehouses list --profile target
 ```
 
-This deploys:
-* The **ZIP Service Gap Index** dashboard
-* All three notebooks to the workspace (ingest, build, key decisions)
-* The 3 CSV files to `resources/data/` in the deployed workspace folder
+You'll see something like:
 
-### Step 5 — Ingest the raw data
+```
+ID                Name                          Size      State
+b46ccaa42cf433a9  Serverless Starter Warehouse  2X-Small  STOPPED
+```
 
-In the Databricks UI, navigate to the deployed workspace folder and open `ingest_raw_data.py`.
+Copy the 16-character **ID** from the first column. Any warehouse works; a stopped one starts automatically when the dashboard needs it.
 
-Click **Run All**. This reads the 3 CSVs that shipped with the bundle and creates:
+If the list is empty, create one in the Databricks UI: left sidebar → **SQL Warehouses** → **Create SQL warehouse** → accept the defaults → **Create**. Then rerun the list command.
 
-| Table | Source CSV | Rows |
-| --- | --- | --- |
-| `workspace.default.rat_sightings` | `rat_sightings.csv` | ~51K |
-| `workspace.default.restaurant_inspections` | `restaurant_inspections.csv` | ~158K |
-| `workspace.default.nyc_population_by_zip` | `nyc_population_by_zip.csv` | 231 |
+### Step 5 — Deploy the bundle to your workspace
 
-The notebook also creates the `workspace` catalog and `default` schema if they don't already exist.
+Tell the CLI which profile to use for the rest of this terminal session:
 
-### Step 6 — Build the clean tables and index
+```bash
+export DATABRICKS_CONFIG_PROFILE=target
+```
 
-Open `build_notebook.py` and click **Run All**. This creates:
+(`target` here is the profile name you chose in Step 2. If you named it something else, use that name.)
 
-* `rodent_complaints_clean` — one row per 311 complaint, with auto-close flagging
-* `restaurant_violations_clean` — one row per violation, with rodent-violation flags
-* `restaurants_clean` — one row per restaurant, with inspection summaries
-* `nyc_population_clean` — one row per ZIP, with population quality flags
-* **`zip_service_gap_index`** — the final table the dashboard reads
+Save your warehouse ID from Step 4 in a variable too, so you don't have to retype it:
 
-Cell 5 at the end of the notebook prints a sanity-check table showing `actual` vs `expected` row counts. If every row matches, the build succeeded.
+```bash
+export WAREHOUSE_ID=<your-warehouse-id>
+```
+
+Check the bundle for errors, then deploy it:
+
+```bash
+databricks bundle validate --target dev --var="warehouse_id=$WAREHOUSE_ID"
+databricks bundle deploy   --target dev --var="warehouse_id=$WAREHOUSE_ID"
+```
+
+> `--target dev` selects the `dev` environment defined in `databricks.yml`. It has nothing to do with the profile named `target`.
+
+Deploying takes a minute or two (it uploads about 47 MB of CSV data). When it finishes you'll see:
+
+```
+Created dashboards.zip_service_gap_index
+Created jobs.build_tables
+Files: 11 uploaded, 0 deleted
+```
+
+Because `dev` is a development target, everything lands in your personal workspace folder and the dashboard and job names get a `[dev <your name>]` prefix. That's expected.
+
+### Step 6 — Build the tables
+
+One command runs the whole pipeline on serverless compute and waits for it to finish:
+
+```bash
+databricks bundle run build_tables --target dev --var="warehouse_id=$WAREHOUSE_ID"
+```
+
+It prints a link to the run and then status lines. Expect about 4 minutes:
+
+```
+"[dev <your name>] NYC Service Gap Index - Build Tables" QUEUED
+"[dev <your name>] NYC Service Gap Index - Build Tables" RUNNING
+"[dev <your name>] NYC Service Gap Index - Build Tables" TERMINATED SUCCESS
+```
+
+The job has two steps:
+
+1. **ingest** reads the three CSVs that shipped with the bundle and creates the raw tables. It also creates the `workspace` catalog and `default` schema if they don't exist.
+2. **build** transforms those into five clean tables and the final `zip_service_gap_index` table the dashboard reads.
+
+If the last line says `TERMINATED SUCCESS`, you're done with data. If it says `FAILED`, open the run link it printed; the failing step's error is shown there. See [Troubleshooting](#troubleshooting).
+
+<details>
+<summary>Prefer to run the notebooks by hand instead?</summary>
+
+1. In Databricks, click **Workspace** in the left sidebar, then **Home**.
+2. Open `.bundle` → `nyc_service_gap_index` → `dev` → `files` → `resources` → `notebooks`.
+3. Open `ingest_raw_data`. At the top right, use the **Connect** dropdown to choose **Serverless**. Click **Run all**.
+4. When it finishes, open `build_notebook` and do the same.
+
+The **Sanity checks** cell at the bottom of `build_notebook` shows `actual` vs `expected` counts. If every row matches, the build succeeded.
+
+</details>
 
 ### Step 7 — Open the dashboard
 
-Navigate to **Workspace → Dashboards** (or **Catalog → Dashboards**) and find **"ZIP Service Gap Index"**. It should display:
+Click **Dashboards** in the left sidebar and open **[dev <your name>] ZIP Service Gap Index**. Or, from the terminal:
+
+```bash
+databricks bundle open zip_service_gap_index --target dev --var="warehouse_id=$WAREHOUSE_ID"
+```
+
+You should see:
+
 * A bar chart of average service gap index by borough
-* A full table of every NYC ZIP code with all complaint, restaurant, and index columns
+* A table of every NYC ZIP code with complaint, restaurant, and index columns
 * Borough and index-range filters
 
-If the widgets show no data, make sure your SQL warehouse is running.
+If the widgets are blank, click **Refresh** at the top of the dashboard. The SQL warehouse may take a minute to start.
 
 ---
 
@@ -140,20 +206,62 @@ If the widgets show no data, make sure your SQL warehouse is running.
 
 | Problem | Fix |
 | --- | --- |
-| **"Credential was not sent" or "invalid header field value for Authorization"** | Your token has invalid characters (whitespace, newlines) or wasn't saved. Re-run `databricks configure --profile target --host https://<workspace-url> --token` (note: double-hyphen `--token`, not em-dash). When prompted, copy the token directly from the Databricks UI with no extra spaces or line breaks. |
-| **"Catalog workspace does not exist"** | `ingest_raw_data.py` creates it automatically. If it fails, ensure you have `CREATE CATALOG` permission. |
-| **Dashboard shows no data** | Run `ingest_raw_data.py` then `build_notebook.py` first. The dashboard reads `workspace.default.zip_service_gap_index`, which doesn't exist until both notebooks have run. |
-| **"warehouse_id is required"** | Pass `--var="warehouse_id=<id>"` on the deploy command, or set it in `databricks.yml`. |
-| **Notebook can't find CSVs** | The `data_dir` widget in `ingest_raw_data.py` auto-detects the path. If it's wrong, set the widget manually to the deployed `resources/data/` folder. |
-| **Different catalog/schema** | See [Updating catalog & schema](#updating-catalog--schema) below. |
+| **`databricks: command not found`** | The CLI isn't installed or isn't on your PATH. Redo Step 1, then close and reopen your terminal. |
+| **`Error: default auth: cannot configure default credentials`** | The CLI doesn't know which profile to use. Run `export DATABRICKS_CONFIG_PROFILE=target` (Step 5), or add `--profile target` to the command. |
+| **"Credential was not sent" or "invalid header field value for Authorization"** (Option B) | The token has stray whitespace or line breaks, or wasn't saved. Rerun the `databricks configure` command from Step 2 and paste the token straight from the Databricks UI with nothing extra. Make sure `--token` is typed with two plain hyphens. |
+| **Login window never opens (Option A)** | Your admin may have disabled OAuth. Use Option B in Step 2. |
+| **Deploy fails mentioning `warehouse_id`** | Pass `--var="warehouse_id=<id>"` on the deploy command. The default value in `databricks.yml` is the original author's warehouse and won't exist in your workspace. |
+| **Can't find the `.bundle` folder** | Run `databricks bundle summary --target dev --var="warehouse_id=$WAREHOUSE_ID"` and use the path it prints. In the Workspace browser you can paste that path into the search box. |
+| **Job fails in the `ingest` step with "CSV directory not found"** | Run `databricks bundle summary --target dev --var="warehouse_id=$WAREHOUSE_ID"` and confirm the files were uploaded. If you're running the notebook by hand, set its `data_dir` widget to `/Workspace/Users/<your-email>/.bundle/nyc_service_gap_index/dev/files/resources/data`. |
+| **Job fails immediately mentioning serverless or compute** | Your workspace doesn't have serverless jobs enabled. Ask an admin to enable it, or run the notebooks by hand on a cluster (see the expandable section in Step 6). |
+| **"Catalog workspace does not exist"** or permission error creating it | You need `CREATE CATALOG` permission, or an admin can create the `workspace` catalog and `default` schema for you. See [Using a different catalog or schema](#using-a-different-catalog-or-schema). |
+| **Dashboard shows no data** | The build job must finish first. The dashboard reads `workspace.default.zip_service_gap_index`, which doesn't exist until Step 6 succeeds. |
+| **Notebook won't run / "no compute attached"** (manual route only) | Use the **Connect** dropdown at the top right of the notebook to pick Serverless or a running cluster. |
 
 ---
 
-## Updating catalog & schema
+## What's included
 
-The notebook SQL hardcodes `workspace.default.*`. To use a different catalog/schema, either:
+| File | Description |
+| --- | --- |
+| `databricks.yml` | Bundle definition: the `warehouse_id` variable, `dev`/`prod` targets, the `build_tables` job, the dashboard, and which files to sync |
+| `resources/data/rat_sightings.csv` | NYC 311 rodent complaint records (50,954 rows) |
+| `resources/data/restaurant_inspections.csv` | NYC DOHMH restaurant inspection records (158,083 rows) |
+| `resources/data/nyc_population_by_zip.csv` | ACS population estimates by ZIP code (231 rows) |
+| `resources/notebooks/ingest_raw_data.py` | Reads the 3 CSVs and creates the raw tables |
+| `resources/notebooks/build_notebook.sql` | SQL that transforms raw tables into clean tables and the final `zip_service_gap_index` |
+| `resources/notebooks/key_decisions_notebook.sql` | Documentation notebook: 11 analytical decisions with validation queries |
+| `resources/dashboards/zip_service_gap_index_dashboard.json` | Lakeview dashboard (bar chart plus full ZIP-level table) |
 
-1. **Create matching names** on the target (simplest):
+## Data pipeline overview
+
+```
+resources/data/*.csv
+        │
+        ▼  build_tables job, step 1: ingest_raw_data
+  3 raw tables in workspace.default
+        │
+        ▼  build_tables job, step 2: build_notebook
+  5 clean tables + zip_service_gap_index
+        │
+        ▼
+  Dashboard reads zip_service_gap_index
+```
+
+| Raw table (from CSV) | Clean table (build notebook creates) |
+| --- | --- |
+| `rat_sightings` | `rodent_complaints_clean` |
+| `restaurant_inspections` | `restaurant_violations_clean` → `restaurants_clean` |
+| `nyc_population_by_zip` | `nyc_population_clean` |
+| | **`zip_service_gap_index`** (final output the dashboard reads) |
+
+---
+
+## Using a different catalog or schema
+
+The notebooks and dashboard hardcode `workspace.default`. If you can't use that name, you have two options:
+
+1. **Create matching names** in your workspace (simplest; needs an admin if you lack permission):
 
    ```sql
    CREATE CATALOG IF NOT EXISTS workspace;
@@ -162,11 +270,19 @@ The notebook SQL hardcodes `workspace.default.*`. To use a different catalog/sch
 
    Then no code changes are needed.
 
-2. **Find-and-replace** in the notebook and dashboard files: replace `workspace.default` with your target `catalog.schema` in:
-   * `ingest_raw_data.py`
-   * `build_notebook.py`
-   * `key_decisions_notebook.py`
-   * `zip_service_gap_index_dashboard.json` (the dashboard dataset source)
+2. **Find-and-replace** `workspace.default` with your `catalog.schema` in these four files, then redeploy (Step 5):
+   * `resources/notebooks/ingest_raw_data.py`
+   * `resources/notebooks/build_notebook.sql`
+   * `resources/notebooks/key_decisions_notebook.sql`
+   * `resources/dashboards/zip_service_gap_index_dashboard.json`
+
+## Redeploying after changes
+
+If you edit any file in this repo, push the changes with the same deploy command from Step 5, then rerun the job from Step 6. To remove everything the bundle created from your workspace (the tables stay):
+
+```bash
+databricks bundle destroy --target dev --var="warehouse_id=$WAREHOUSE_ID"
+```
 
 ---
 
@@ -180,4 +296,4 @@ The NYC Service Gap Index measures the gap between rodent need and city response
 
 The composite index (0–100) averages the three percentile ranks. A higher score means a bigger gap between how many rodents inspectors find and how little the city responds.
 
-For a detailed walkthrough of each analytical decision (what counts as a rodent complaint, why auto-closes are excluded, why median not average, etc.), open `key_decisions_notebook.py` and run the cells.
+For a detailed walkthrough of each analytical decision (what counts as a rodent complaint, why auto-closes are excluded, why median not average, and so on), open `key_decisions_notebook` in the workspace and run the cells.
