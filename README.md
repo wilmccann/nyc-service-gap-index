@@ -2,7 +2,19 @@
 
 A self-contained Databricks project that packages the **source data**, **build notebooks**, and **dashboard** for the NYC ZIP Service Gap Index. You copy this repo to your computer, run a few terminal commands, and the dashboard is live. No manual data upload and no clicking around notebooks is needed.
 
-**Time to set up:** about 20–30 minutes the first time.
+**Time to set up:** about 20–30 minutes the first time. It runs on [Databricks Free Edition](https://www.databricks.com/learn/free-edition), so no paid account is needed.
+
+---
+
+## About this project
+
+![AI Hackathon + Networking NYC, September 18–20, Queens College](docs/hackathon-banner.png)
+
+Built at the **AI Hackathon + Networking NYC** (September 18–20, 2026, Dining Hall at Queens College), hosted by Databricks, the Tech Incubator at Queens College, and WAGMI-Connect.
+
+**Team:** Will M. and Dylan T.
+
+The project asks a simple question: in which NYC ZIP codes do inspectors keep finding rodents while the city's 311 response stays weak? See [Project background](#project-background) for how the index is built.
 
 ---
 
@@ -24,6 +36,12 @@ If you've never set up a Databricks project before, these are the only concepts 
 ---
 
 ## Quick start
+
+### Prerequisites
+
+* A Databricks workspace. [Databricks Free Edition](https://www.databricks.com/learn/free-edition) works: it includes serverless compute, a SQL warehouse, and Unity Catalog, which is everything this project needs. Sign up takes a couple of minutes.
+* Git installed on your computer.
+* A terminal (Terminal on macOS, PowerShell on Windows).
 
 ### Step 1 — Install the Databricks CLI
 
