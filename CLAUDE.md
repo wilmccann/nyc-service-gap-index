@@ -33,7 +33,7 @@ Verification after any change to notebooks, `databricks.yml`, or the dashboard/G
 - Run every dashboard dataset query against the warehouse (loop over `datasets[].queryLines` in the dashboard JSON via `POST /api/2.0/sql/statements`). A dataset that errors shows as a blank widget, which users report as "the dashboard is broken".
 - Check UI listings, not just the API: `databricks genie list-spaces`, the Dashboards page, and the Workspace browser.
 
-Cleanup: `databricks bundle destroy` in the root and in `genie/` (tables and volume contents survive).
+Cleanup: `./scripts/teardown.sh` (needs the same two env vars). It runs both bundle destroys, then deletes the job, dashboard, and Genie space by name in case bundle state is missing, drops the tables, views, and volume, and removes the project's workspace folders. Tested against a workspace whose state a fresh clone could not see.
 
 ## Architecture
 

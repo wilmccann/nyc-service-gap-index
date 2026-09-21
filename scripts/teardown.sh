@@ -28,13 +28,30 @@ sql() {
     | python3 -c 'import json,sys; d=json.load(sys.stdin); s=d["status"]["state"]; print("   ", sys.argv[1], "->", s if s=="SUCCEEDED" else s+": "+d["status"].get("error",{}).get("message","")[:120])' "$1"
 }
 
-echo "1/4  Genie space"
+echo "1/4  Genie space (bundle destroy)"
 (cd genie && databricks bundle destroy --target "$TARGET" --var="warehouse_id=$WAREHOUSE_ID" --auto-approve) \
   || echo "    (genie bundle destroy reported a problem; continuing)"
 
-echo "2/4  Job, dashboard, volume, and uploaded files"
+echo "2/4  Job, dashboard, volume, and uploaded files (bundle destroy)"
 databricks bundle destroy --target "$TARGET" --var="warehouse_id=$WAREHOUSE_ID" --auto-approve \
   || echo "    (bundle destroy reported a problem; continuing)"
+
+echo "2b   Anything the destroys missed (matched by name, in case bundle state was lost)"
+databricks jobs list -o json | python3 -c '
+import json,sys
+for j in json.load(sys.stdin):
+    if j["settings"]["name"].endswith("NYC Service Gap Index - Build Tables"): print(j["job_id"], j["settings"]["name"])' \
+  | while read -r id name; do databricks jobs delete "$id" && echo "    deleted job $name"; done
+databricks lakeview list -o json | python3 -c '
+import json,sys
+for d in json.load(sys.stdin):
+    if d["display_name"].endswith("NYC Service Gap Dashboard"): print(d["dashboard_id"], d["display_name"])' \
+  | while read -r id name; do databricks lakeview trash "$id" && echo "    trashed dashboard $name"; done
+databricks genie list-spaces | python3 -c '
+import json,sys
+for g in json.load(sys.stdin).get("spaces", []):
+    if g["title"].endswith("Genie Agent: NYC Rodent and Restaurant Health Insights"): print(g["space_id"], g["title"])' \
+  | while read -r id name; do databricks genie trash-space "$id" && echo "    trashed Genie space $name"; done
 
 echo "3/4  Tables and views in workspace.default"
 for v in zip_lookup_v borough_metric_shares_v rats_clean; do
