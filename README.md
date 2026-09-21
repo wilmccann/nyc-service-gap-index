@@ -164,16 +164,25 @@ databricks bundle deploy   --target dev --var="warehouse_id=$WAREHOUSE_ID"
 
 > `--target dev` selects the `dev` environment defined in `databricks.yml`. It has nothing to do with the profile named `target`.
 
-Deploying takes a minute or two (it uploads about 47 MB of CSV data). When it finishes you'll see something like this (the two `Created` lines can appear in either order):
+Deploying takes about a minute. It creates the dashboard, the `build_tables` job, the three notebooks, and an empty Unity Catalog volume called `workspace.default.raw_data` for the data files. When it finishes you'll see something like this (the `Created` lines can appear in any order):
 
 ```
+Created volumes.raw_data
 Created jobs.build_tables
 Created dashboards.zip_service_gap_index
-Files: 10 uploaded, 0 deleted
-Resources: 2 created, 0 changed, 0 deleted, 0 unchanged
+Files: 6 uploaded, 0 deleted
+Resources: 3 created, 0 changed, 0 deleted, 0 unchanged
 ```
 
 Because `dev` is a development target, everything lands in your personal workspace folder and the dashboard and job names get a `[dev <your name>]` prefix. That's expected.
+
+Now upload the three CSV files into the volume. This takes about 10 seconds:
+
+```bash
+databricks fs cp resources/data dbfs:/Volumes/workspace/default/raw_data --recursive --overwrite
+```
+
+You'll see one line per file. (Why a separate step? Data files belong in a volume, not in the workspace folder with the notebooks. Large files in the workspace folder fail to read on some accounts.)
 
 ### Step 6 — Build the tables
 
@@ -193,7 +202,7 @@ It prints a link to the run and then status lines. Expect about 4 minutes:
 
 The job has two steps:
 
-1. **ingest** copies the three CSVs that shipped with the bundle into a Unity Catalog volume (`workspace.default.raw_data`) and creates the raw tables from there. It also creates the `workspace` catalog and `default` schema if they don't exist.
+1. **ingest** reads the three CSVs you uploaded to the volume and creates the raw tables. It also creates the `workspace` catalog and `default` schema if they don't exist.
 2. **build** transforms those into five clean tables, the final `zip_service_gap_index` table, and two views the dashboard reads.
 
 If the last line says `TERMINATED SUCCESS`, you're done with data. If it says `FAILED`, open the run link it printed; the failing step's error is shown there. See [Troubleshooting](#troubleshooting).
@@ -203,7 +212,7 @@ If the last line says `TERMINATED SUCCESS`, you're done with data. If it says `F
 
 1. In Databricks, click **Workspace** in the left sidebar, then **Home**.
 2. Open `.bundle` → `nyc_service_gap_index` → `dev` → `files` → `resources` → `notebooks`.
-3. Open `ingest_raw_data`. At the top right, use the **Connect** dropdown to choose **Serverless**. Click **Run all**.
+3. Open `ingest_raw_data`. At the top right, use the **Connect** dropdown to choose **Serverless**. Click **Run all**. (It reads from the volume you uploaded to in Step 5.)
 4. When it finishes, open `build_notebook` and do the same.
 
 The **Sanity checks** cell at the bottom of `build_notebook` shows `actual` vs `expected` counts. If every row matches, the build succeeded.
@@ -238,8 +247,8 @@ If the widgets are blank, click **Refresh** at the top of the dashboard. The SQL
 | **Login window never opens (Option A)** | Your admin may have disabled OAuth. Use Option B in Step 2. |
 | **Deploy fails mentioning `warehouse_id`** | Pass `--var="warehouse_id=<id>"` on the deploy command. The default value in `databricks.yml` is the original author's warehouse and won't exist in your workspace. |
 | **Can't find the `.bundle` folder or the notebooks** | The workspace search box doesn't index `.bundle`. Browse to it: **Workspace → Home → .bundle → nyc_service_gap_index → dev → files → resources → notebooks**. Or run `databricks bundle summary --target dev --var="warehouse_id=$WAREHOUSE_ID"` and use the path it prints. In the Workspace browser you can paste that path into the search box. |
-| **Job fails in the `ingest` step with "CSV directory not found"** | Run `databricks bundle summary --target dev --var="warehouse_id=$WAREHOUSE_ID"` and confirm the files were uploaded. If you're running the notebook by hand, set its `data_dir` widget to `/Workspace/Users/<your-email>/.bundle/nyc_service_gap_index/dev/files/resources/data`. |
-| **Job fails in `ingest` with `FAILED_READ_FILE` or `Error while reading file`** | Spark could not read a CSV. Make sure you're on the latest version of this repo (`git pull`, then redeploy). Older versions read CSVs straight from the workspace folder, which fails on some workspaces; the current version stages them in a Unity Catalog volume first. |
+| **Job fails in `ingest` with `Missing in /Volumes/workspace/default/raw_data`** | The CSVs haven't been uploaded yet. Run the `databricks fs cp` command from Step 5. |
+| **Job fails in `ingest` with `FAILED_READ_FILE`, `Input/output error`, or a `403 Forbidden` from storage** | You're on an old version of this repo that read CSVs from the workspace folder. Run `git pull`, redeploy (Step 5), upload the CSVs with `databricks fs cp`, and rerun the job. |
 | **Job fails immediately mentioning serverless or compute** | Your workspace doesn't have serverless jobs enabled. Ask an admin to enable it, or run the notebooks by hand on a cluster (see the expandable section in Step 6). |
 | **"Catalog workspace does not exist"** or permission error creating it | You need `CREATE CATALOG` permission, or an admin can create the `workspace` catalog and `default` schema for you. See [Using a different catalog or schema](#using-a-different-catalog-or-schema). |
 | **Dashboard shows no data** | The build job must finish first. The dashboard reads `workspace.default.zip_service_gap_index`, which doesn't exist until Step 6 succeeds. |
@@ -253,11 +262,11 @@ If the widgets are blank, click **Refresh** at the top of the dashboard. The SQL
 | --- | --- |
 | `docs/hackathon-brief.md` | The "Is My Block Cursed?" participant guide, converted to Markdown |
 | `hackathon-materials/` | The original handout (Word) and the two raw CSVs exactly as provided at the event. Not used by the bundle; kept for reference. |
-| `databricks.yml` | Bundle definition: the `warehouse_id` variable, `dev`/`prod` targets, the `build_tables` job, the dashboard, and which files to sync |
+| `databricks.yml` | Bundle definition: the `warehouse_id` variable, `dev`/`prod` targets, the `raw_data` volume, the `build_tables` job, the dashboard, and which files to sync |
 | `resources/data/rat_sightings.csv` | NYC 311 rodent complaint records (50,954 rows). Same rows as the hackathon file, with a few unused columns dropped. |
 | `resources/data/restaurant_inspections.csv` | NYC DOHMH restaurant inspection records (158,083 rows). Same rows as the hackathon file, with a few unused columns dropped. |
 | `resources/data/nyc_population_by_zip.csv` | ACS population estimates by ZIP code (231 rows). Not provided at the event; the team downloaded it to turn raw counts into per-capita rates. |
-| `resources/notebooks/ingest_raw_data.py` | Copies the 3 CSVs into a Unity Catalog volume and creates the raw tables |
+| `resources/notebooks/ingest_raw_data.py` | Reads the 3 CSVs from the `raw_data` volume and creates the raw tables |
 | `resources/notebooks/build_notebook.sql` | SQL that transforms raw tables into clean tables, the final `zip_service_gap_index`, and the two views the dashboard uses |
 | `resources/notebooks/key_decisions_notebook.sql` | Documentation notebook: 11 analytical decisions with validation queries |
 | `resources/dashboards/zip_service_gap_index_dashboard.json` | The NYC Service Gap Dashboard: two pages, 22 datasets, exported from the source workspace |
@@ -266,6 +275,9 @@ If the widgets are blank, click **Refresh** at the top of the dashboard. The SQL
 
 ```
 resources/data/*.csv
+        │
+        ▼  databricks fs cp  (you run this once after deploy)
+  volume workspace.default.raw_data
         │
         ▼  build_tables job, step 1: ingest_raw_data
   3 raw tables in workspace.default
@@ -308,7 +320,7 @@ The notebooks and dashboard hardcode `workspace.default`. If you can't use that 
 
 ## Redeploying after changes
 
-If you edit any file in this repo, push the changes with the same deploy command from Step 5, then rerun the job from Step 6. To remove everything the bundle created from your workspace (the tables stay):
+If you edit any file in this repo, push the changes with the same deploy command from Step 5, then rerun the job from Step 6. You only need to repeat the `databricks fs cp` upload if the CSVs changed. To remove everything the bundle created from your workspace (the tables stay):
 
 ```bash
 databricks bundle destroy --target dev --var="warehouse_id=$WAREHOUSE_ID"

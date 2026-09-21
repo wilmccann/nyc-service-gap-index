@@ -33,6 +33,17 @@ targets:
 # Resources
 # ---------------------------------------------------------------------------
 resources:
+  # --- Volume: where the raw CSVs live ------------------------------------
+  # Data files belong in a Unity Catalog volume, not in the workspace file
+  # tree. After `bundle deploy`, upload the CSVs with:
+  #   databricks fs cp resources/data dbfs:/Volumes/workspace/default/raw_data --recursive --overwrite
+  volumes:
+    raw_data:
+      catalog_name: workspace
+      schema_name: default
+      name: raw_data
+      comment: "Raw CSVs for the NYC Service Gap Index (uploaded with databricks fs cp)"
+
   # --- Job: ingest the CSVs, then build the clean tables and the index ----
   # Runs on serverless compute (no cluster configuration needed).
   # Trigger it with: databricks bundle run build_tables --target dev
@@ -44,7 +55,7 @@ resources:
           notebook_task:
             notebook_path: ./resources/notebooks/ingest_raw_data.py
             base_parameters:
-              data_dir: ${workspace.file_path}/resources/data
+              data_dir: /Volumes/workspace/default/raw_data
         - task_key: build
           depends_on:
             - task_key: ingest
@@ -70,6 +81,7 @@ resources:
 sync:
   # Reference material and repo housekeeping are not needed in the workspace.
   exclude:
+    - "resources/data/**"
     - "hackathon-materials/**"
     - "docs/**"
     - ".gitignore"
@@ -77,6 +89,5 @@ sync:
     - ./resources/notebooks/ingest_raw_data.py
     - ./resources/notebooks/build_notebook.sql
     - ./resources/notebooks/key_decisions_notebook.sql
-    - ./resources/data/*.csv
     - ./resources/dashboards/zip_service_gap_index_dashboard.json
     - ./README.md
