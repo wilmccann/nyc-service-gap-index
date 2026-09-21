@@ -56,10 +56,10 @@ resources:
       #   timezone_id: UTC
       #   pause_status: PAUSED
 
-  # --- Dashboard: ZIP Service Gap Index -----------------------------------
+  # --- Dashboard: NYC Service Gap Dashboard -----------------------------------
   dashboards:
     zip_service_gap_index:
-      display_name: "ZIP Service Gap Index"
+      display_name: "NYC Service Gap Dashboard"
       file_path: ./resources/dashboards/zip_service_gap_index_dashboard.json
       warehouse_id: ${var.warehouse_id}
 

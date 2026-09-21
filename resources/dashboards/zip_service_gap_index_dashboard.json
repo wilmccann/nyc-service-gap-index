@@ -1,72 +1,950 @@
 {
   "datasets": [
     {
-      "name": "dataset1",
-      "displayName": "zip_service_gap_index",
-      "config": {
-        "version": "1.1",
-        "source": "workspace.default.zip_service_gap_index",
-        "dimensions": [
-          {
-            "expr": "source.*"
-          }
-        ],
-        "measures": [
-          {
-            "name": "count",
-            "expr": "COUNT(*)",
-            "displayName": "Count",
-            "comment": "Represents the total number of rows in the dataset. Use this measure to count all"
-          }
-        ]
-      }
+      "name": "zip_gap_main",
+      "displayName": "ZIP Service Gap Index",
+      "queryLines": [
+        "SELECT\n",
+        "  *\n",
+        "FROM\n",
+        "  zip_service_gap_index"
+      ],
+      "catalog": "workspace",
+      "schema": "default"
+    },
+    {
+      "name": "zip_gap_top15",
+      "displayName": "Top 15 ZIPs by Service Gap Index",
+      "queryLines": [
+        "SELECT\n",
+        "  *\n",
+        "FROM\n",
+        "  zip_service_gap_index\n",
+        "WHERE\n",
+        "  has_enough_data = true\n",
+        "ORDER BY\n",
+        "  service_gap_index DESC\n",
+        "LIMIT 15"
+      ],
+      "catalog": "workspace",
+      "schema": "default"
+    },
+    {
+      "name": "zip_lookup",
+      "displayName": "ZIP Lookup",
+      "queryLines": [
+        "SELECT\n",
+        "  *\n",
+        "FROM\n",
+        "  zip_lookup_v"
+      ],
+      "catalog": "workspace",
+      "schema": "default"
+    },
+    {
+      "name": "zip_measures",
+      "displayName": "ZIP Measures (3-row)",
+      "queryLines": [
+        "SELECT\n",
+        "  `zip`,\n",
+        "  'Complaints closed without a visit' AS measure,\n",
+        "  `pct_auto_closed_before_apr2026` AS this_zip,\n",
+        "  `typical_pct_auto_closed` AS typical_zip,\n",
+        "  `complaints_before_apr2026` AS based_on\n",
+        "FROM\n",
+        "  zip_lookup_v\n",
+        "UNION ALL\n",
+        "SELECT\n",
+        "  `zip`,\n",
+        "  'Median days to close' AS measure,\n",
+        "  `median_days_to_close_after_apr2026` AS this_zip,\n",
+        "  `typical_median_days_to_close` AS typical_zip,\n",
+        "  `complaints_after_apr2026` AS based_on\n",
+        "FROM\n",
+        "  zip_lookup_v\n",
+        "UNION ALL\n",
+        "SELECT\n",
+        "  `zip`,\n",
+        "  'Restaurants cited for rats or mice' AS measure,\n",
+        "  `rodent_violation_rate_pct` AS this_zip,\n",
+        "  `typical_rodent_violation_rate` AS typical_zip,\n",
+        "  `restaurants` AS based_on\n",
+        "FROM\n",
+        "  zip_lookup_v"
+      ],
+      "catalog": "workspace",
+      "schema": "default"
+    },
+    {
+      "name": "zip_details",
+      "displayName": "ZIP Details (metric/value)",
+      "queryLines": [
+        "SELECT\n",
+        "  `zip`,\n",
+        "  'Complaints (total)' AS metric,\n",
+        "  COALESCE(CAST(`complaints_all` AS STRING), 'No estimate') AS value\n",
+        "FROM\n",
+        "  zip_lookup_v\n",
+        "UNION ALL\n",
+        "SELECT\n",
+        "  `zip`,\n",
+        "  'Rat sightings' AS metric,\n",
+        "  COALESCE(CAST(`rat_sightings` AS STRING), 'No estimate') AS value\n",
+        "FROM\n",
+        "  zip_lookup_v\n",
+        "UNION ALL\n",
+        "SELECT\n",
+        "  `zip`,\n",
+        "  'Condition complaints' AS metric,\n",
+        "  COALESCE(CAST(`condition_complaints` AS STRING), 'No estimate') AS value\n",
+        "FROM\n",
+        "  zip_lookup_v\n",
+        "UNION ALL\n",
+        "SELECT\n",
+        "  `zip`,\n",
+        "  'Distinct locations' AS metric,\n",
+        "  COALESCE(CAST(`distinct_locations` AS STRING), 'No estimate') AS value\n",
+        "FROM\n",
+        "  zip_lookup_v\n",
+        "UNION ALL\n",
+        "SELECT\n",
+        "  `zip`,\n",
+        "  'Top location share %' AS metric,\n",
+        "  COALESCE(CAST(CAST(`top_location_share_pct` AS DECIMAL(10, 1)) AS STRING), 'No estimate') AS value\n",
+        "FROM\n",
+        "  zip_lookup_v\n",
+        "UNION ALL\n",
+        "SELECT\n",
+        "  `zip`,\n",
+        "  'Population' AS metric,\n",
+        "  COALESCE(CAST(`population` AS STRING), 'No estimate') AS value\n",
+        "FROM\n",
+        "  zip_lookup_v\n",
+        "UNION ALL\n",
+        "SELECT\n",
+        "  `zip`,\n",
+        "  'Complaints per 10K residents' AS metric,\n",
+        "  COALESCE(\n",
+        "    CAST(CAST(`complaints_per_10k_residents` AS DECIMAL(10, 1)) AS STRING),\n",
+        "    'No estimate'\n",
+        "  ) AS value\n",
+        "FROM\n",
+        "  zip_lookup_v\n",
+        "UNION ALL\n",
+        "SELECT\n",
+        "  `zip`,\n",
+        "  'Restaurants' AS metric,\n",
+        "  COALESCE(CAST(`restaurants` AS STRING), 'No estimate') AS value\n",
+        "FROM\n",
+        "  zip_lookup_v\n",
+        "UNION ALL\n",
+        "SELECT\n",
+        "  `zip`,\n",
+        "  'Inspections' AS metric,\n",
+        "  COALESCE(CAST(`inspections` AS STRING), 'No estimate') AS value\n",
+        "FROM\n",
+        "  zip_lookup_v\n",
+        "UNION ALL\n",
+        "SELECT\n",
+        "  `zip`,\n",
+        "  'Restaurants with rodent violations' AS metric,\n",
+        "  COALESCE(CAST(`restaurants_with_rodent_violation` AS STRING), 'No estimate') AS value\n",
+        "FROM\n",
+        "  zip_lookup_v"
+      ],
+      "catalog": "workspace",
+      "schema": "default"
+    },
+    {
+      "name": "zip_warnings",
+      "displayName": "ZIP Warnings",
+      "queryLines": [
+        "SELECT\n",
+        "  `zip`,\n",
+        "  CONCAT(\n",
+        "    'One location accounts for ',\n",
+        "    CAST(CAST(`top_location_share_pct` AS DECIMAL(10, 1)) AS STRING),\n",
+        "    '% of complaints here, so this count may reflect a single building'\n",
+        "  ) AS warning\n",
+        "FROM\n",
+        "  zip_lookup_v\n",
+        "WHERE\n",
+        "  `top_location_share_pct` >= 40\n",
+        "UNION ALL\n",
+        "SELECT\n",
+        "  `zip`,\n",
+        "  'Restaurants here are cited for rodents at a high rate but residents file few 311 calls, which may reflect under-reporting' AS warning\n",
+        "FROM\n",
+        "  zip_lookup_v\n",
+        "WHERE\n",
+        "  `is_quiet_zip`\n",
+        "UNION ALL\n",
+        "SELECT\n",
+        "  `zip`,\n",
+        "  'Just below the scoring cutoff' AS warning\n",
+        "FROM\n",
+        "  zip_lookup_v\n",
+        "WHERE\n",
+        "  `is_borderline`\n",
+        "UNION ALL\n",
+        "SELECT\n",
+        "  `zip`,\n",
+        "  'No warnings for this ZIP' AS warning\n",
+        "FROM\n",
+        "  zip_lookup_v\n",
+        "WHERE\n",
+        "  COALESCE(`top_location_share_pct`, 0) < 40\n",
+        "  AND NOT COALESCE(`is_quiet_zip`, FALSE)\n",
+        "  AND NOT COALESCE(`is_borderline`, FALSE)"
+      ],
+      "catalog": "workspace",
+      "schema": "default"
+    },
+    {
+      "name": "zip_gap_city",
+      "displayName": "City-wide stats",
+      "queryLines": [
+        "SELECT\n",
+        "  SUM(`auto_closed_before_apr2026`)\n",
+        "    * 1.0\n",
+        "    / NULLIF(SUM(`complaints_before_apr2026`), 0) AS pct_auto_closed,\n",
+        "  COUNT_IF(`is_quiet_zip`) AS quiet_zip_count,\n",
+        "  COUNT_IF(`has_enough_data`) AS scored_zip_count,\n",
+        "  COUNT(*) AS total_zip_count\n",
+        "FROM\n",
+        "  zip_service_gap_index"
+      ],
+      "catalog": "workspace",
+      "schema": "default"
+    },
+    {
+      "name": "rat_monthly_close",
+      "displayName": "Rodent complaints closed ≤60s by month",
+      "queryLines": [
+        "SELECT\n",
+        "  date_trunc('month', `created_date`) AS month,\n",
+        "  initcap(`borough`) AS borough,\n",
+        "  COUNT_IF(\n",
+        "    `closed_date` IS NOT NULL\n",
+        "    AND unix_timestamp(`closed_date`) - unix_timestamp(`created_date`) BETWEEN 0 AND 60\n",
+        "  )\n",
+        "    * 100.0\n",
+        "    / NULLIF(COUNT(*), 0) AS pct_closed_within_60s\n",
+        "FROM\n",
+        "  rat_sightings\n",
+        "GROUP BY\n",
+        "  1,\n",
+        "  2"
+      ],
+      "catalog": "workspace",
+      "schema": "default"
+    },
+    {
+      "name": "borough_auto_close",
+      "displayName": "Borough auto-close rates",
+      "queryLines": [
+        "SELECT\n",
+        "  borough,\n",
+        "  pct_auto_closed\n",
+        "FROM\n",
+        "  (\n",
+        "    SELECT\n",
+        "      `borough` AS borough,\n",
+        "      SUM(`auto_closed_before_apr2026`)\n",
+        "        * 1.0\n",
+        "        / NULLIF(SUM(`complaints_before_apr2026`), 0) AS pct_auto_closed,\n",
+        "      0 AS sort_key\n",
+        "    FROM\n",
+        "      zip_service_gap_index\n",
+        "    WHERE\n",
+        "      `borough` IS NOT NULL\n",
+        "      AND `borough` != ''\n",
+        "    GROUP BY\n",
+        "      `borough`\n",
+        "    UNION ALL\n",
+        "    SELECT\n",
+        "      'Citywide' AS borough,\n",
+        "      SUM(`auto_closed_before_apr2026`)\n",
+        "        * 1.0\n",
+        "        / NULLIF(SUM(`complaints_before_apr2026`), 0) AS pct_auto_closed,\n",
+        "      1 AS sort_key\n",
+        "    FROM\n",
+        "      zip_service_gap_index\n",
+        "  ) combined\n",
+        "ORDER BY\n",
+        "  sort_key ASC,\n",
+        "  pct_auto_closed DESC"
+      ],
+      "catalog": "workspace",
+      "schema": "default"
+    },
+    {
+      "name": "borough_ratios",
+      "displayName": "Borough ratio indices",
+      "queryLines": [
+        "WITH citywide AS (\n",
+        "  SELECT\n",
+        "    SUM(`complaints_all`) AS total_complaints,\n",
+        "    SUM(`population`) AS total_population,\n",
+        "    SUM(`restaurants_with_rodent_violation`) AS total_violations,\n",
+        "    SUM(`restaurants`) AS total_restaurants,\n",
+        "    SUM(`auto_closed_before_apr2026`) AS total_auto_closed,\n",
+        "    SUM(`complaints_before_apr2026`) AS total_complaints_before,\n",
+        "    MEDIAN(`median_days_to_close_after_apr2026`) AS city_median_days\n",
+        "  FROM\n",
+        "    zip_service_gap_index\n",
+        "  WHERE\n",
+        "    `has_population` = true\n",
+        "    AND `borough` IS NOT NULL\n",
+        "    AND `borough` != ''\n",
+        "),\n",
+        "borough_rates AS (\n",
+        "  SELECT\n",
+        "    `borough`,\n",
+        "    SUM(`complaints_all`) AS borough_complaints,\n",
+        "    SUM(`population`) AS borough_population,\n",
+        "    SUM(`restaurants_with_rodent_violation`) AS borough_violations,\n",
+        "    SUM(`restaurants`) AS borough_restaurants,\n",
+        "    SUM(`auto_closed_before_apr2026`) AS borough_auto_closed,\n",
+        "    SUM(`complaints_before_apr2026`) AS borough_complaints_before,\n",
+        "    MEDIAN(`median_days_to_close_after_apr2026`) AS borough_median_days\n",
+        "  FROM\n",
+        "    zip_service_gap_index\n",
+        "  WHERE\n",
+        "    `has_population` = true\n",
+        "    AND `borough` IS NOT NULL\n",
+        "    AND `borough` != ''\n",
+        "  GROUP BY\n",
+        "    `borough`\n",
+        ")\n",
+        "SELECT\n",
+        "  b.`borough`,\n",
+        "  '311 complaints per 10k residents' AS metric,\n",
+        "  (b.borough_complaints * 1.0 / NULLIF(b.borough_population, 0))\n",
+        "    / NULLIF(c.total_complaints * 1.0 / NULLIF(c.total_population, 0), 0)\n",
+        "    * 100 AS index_value,\n",
+        "  b.borough_complaints * 1.0 / NULLIF(b.borough_population, 0) AS raw_ratio\n",
+        "FROM\n",
+        "  borough_rates b CROSS JOIN citywide c\n",
+        "UNION ALL\n",
+        "SELECT\n",
+        "  b.`borough`,\n",
+        "  'Restaurants cited for rats or mice' AS metric,\n",
+        "  (b.borough_violations * 1.0 / NULLIF(b.borough_restaurants, 0))\n",
+        "    / NULLIF(c.total_violations * 1.0 / NULLIF(c.total_restaurants, 0), 0)\n",
+        "    * 100 AS index_value,\n",
+        "  b.borough_violations * 1.0 / NULLIF(b.borough_restaurants, 0) AS raw_ratio\n",
+        "FROM\n",
+        "  borough_rates b CROSS JOIN citywide c\n",
+        "UNION ALL\n",
+        "SELECT\n",
+        "  b.`borough`,\n",
+        "  '% complaints closed with no visit' AS metric,\n",
+        "  (b.borough_auto_closed * 1.0 / NULLIF(b.borough_complaints_before, 0))\n",
+        "    / NULLIF(c.total_auto_closed * 1.0 / NULLIF(c.total_complaints_before, 0), 0)\n",
+        "    * 100 AS index_value,\n",
+        "  b.borough_auto_closed * 1.0 / NULLIF(b.borough_complaints_before, 0) AS raw_ratio\n",
+        "FROM\n",
+        "  borough_rates b CROSS JOIN citywide c\n",
+        "UNION ALL\n",
+        "SELECT\n",
+        "  b.`borough`,\n",
+        "  'Median days to close (after Apr 20)' AS metric,\n",
+        "  b.borough_median_days / NULLIF(c.city_median_days, 0) * 100 AS index_value,\n",
+        "  b.borough_median_days AS raw_ratio\n",
+        "FROM\n",
+        "  borough_rates b CROSS JOIN citywide c\n",
+        "ORDER BY\n",
+        "  b.`borough`,\n",
+        "  metric"
+      ],
+      "catalog": "workspace",
+      "schema": "default"
+    },
+    {
+      "name": "borough_median_close",
+      "displayName": "Borough median close days",
+      "queryLines": [
+        "SELECT\n",
+        "  borough,\n",
+        "  median_days,\n",
+        "  complaints_filed,\n",
+        "  complaints_closed\n",
+        "FROM\n",
+        "  (\n",
+        "    SELECT\n",
+        "      initcap(`borough`) AS borough,\n",
+        "      percentile_approx(\n",
+        "        CASE\n",
+        "          WHEN\n",
+        "            `closed_date` IS NOT NULL\n",
+        "            AND `closed_date` >= `created_date`\n",
+        "          THEN\n",
+        "            (unix_timestamp(`closed_date`) - unix_timestamp(`created_date`)) / 86400\n",
+        "          ELSE NULL\n",
+        "        END,\n",
+        "        0.5\n",
+        "      ) AS median_days,\n",
+        "      COUNT(*) AS complaints_filed,\n",
+        "      COUNT_IF(\n",
+        "        `closed_date` IS NOT NULL\n",
+        "        AND `closed_date` >= `created_date`\n",
+        "      ) AS complaints_closed,\n",
+        "      0 AS sort_key\n",
+        "    FROM\n",
+        "      rat_sightings\n",
+        "    WHERE\n",
+        "      `created_date` >= '2026-04-20'\n",
+        "      AND `created_date` < '2026-08-01'\n",
+        "      AND `borough` IS NOT NULL\n",
+        "      AND lower(`borough`) != 'unspecified'\n",
+        "    GROUP BY\n",
+        "      initcap(`borough`)\n",
+        "    UNION ALL\n",
+        "    SELECT\n",
+        "      'Citywide' AS borough,\n",
+        "      percentile_approx(\n",
+        "        CASE\n",
+        "          WHEN\n",
+        "            `closed_date` IS NOT NULL\n",
+        "            AND `closed_date` >= `created_date`\n",
+        "          THEN\n",
+        "            (unix_timestamp(`closed_date`) - unix_timestamp(`created_date`)) / 86400\n",
+        "          ELSE NULL\n",
+        "        END,\n",
+        "        0.5\n",
+        "      ) AS median_days,\n",
+        "      COUNT(*) AS complaints_filed,\n",
+        "      COUNT_IF(\n",
+        "        `closed_date` IS NOT NULL\n",
+        "        AND `closed_date` >= `created_date`\n",
+        "      ) AS complaints_closed,\n",
+        "      1 AS sort_key\n",
+        "    FROM\n",
+        "      rat_sightings\n",
+        "    WHERE\n",
+        "      `created_date` >= '2026-04-20'\n",
+        "      AND `created_date` < '2026-08-01'\n",
+        "      AND `borough` IS NOT NULL\n",
+        "      AND lower(`borough`) != 'unspecified'\n",
+        "  ) combined\n",
+        "ORDER BY\n",
+        "  sort_key ASC,\n",
+        "  median_days DESC"
+      ],
+      "catalog": "workspace",
+      "schema": "default"
+    },
+    {
+      "name": "borough_inspections",
+      "displayName": "Borough inspections per restaurant",
+      "queryLines": [
+        "SELECT\n",
+        "  borough,\n",
+        "  inspections_per_restaurant\n",
+        "FROM\n",
+        "  (\n",
+        "    SELECT\n",
+        "      COALESCE(`borough`, 'Not assigned') AS borough,\n",
+        "      SUM(`inspections`) * 1.0 / NULLIF(SUM(`restaurants`), 0) AS inspections_per_restaurant,\n",
+        "      0 AS sort_key\n",
+        "    FROM\n",
+        "      zip_service_gap_index\n",
+        "    GROUP BY\n",
+        "      COALESCE(`borough`, 'Not assigned')\n",
+        "    UNION ALL\n",
+        "    SELECT\n",
+        "      'Citywide' AS borough,\n",
+        "      SUM(`inspections`) * 1.0 / NULLIF(SUM(`restaurants`), 0) AS inspections_per_restaurant,\n",
+        "      1 AS sort_key\n",
+        "    FROM\n",
+        "      zip_service_gap_index\n",
+        "  ) combined\n",
+        "ORDER BY\n",
+        "  sort_key ASC,\n",
+        "  inspections_per_restaurant DESC"
+      ],
+      "catalog": "workspace",
+      "schema": "default"
+    },
+    {
+      "name": "borough_rodent_share",
+      "displayName": "Borough rodent citation share",
+      "queryLines": [
+        "SELECT\n",
+        "  borough,\n",
+        "  rodent_violation_pct,\n",
+        "  total_restaurants,\n",
+        "  total_inspections,\n",
+        "  rats_only_pct\n",
+        "FROM\n",
+        "  (\n",
+        "    SELECT\n",
+        "      COALESCE(`borough`, 'Not assigned') AS borough,\n",
+        "      100.0\n",
+        "        * SUM(`restaurants_with_rodent_violation`)\n",
+        "        / NULLIF(SUM(`restaurants`), 0) AS rodent_violation_pct,\n",
+        "      SUM(`restaurants`) AS total_restaurants,\n",
+        "      SUM(`inspections`) AS total_inspections,\n",
+        "      100.0\n",
+        "        * SUM(`restaurants_with_rat_violation`)\n",
+        "        / NULLIF(SUM(`restaurants`), 0) AS rats_only_pct,\n",
+        "      0 AS sort_key\n",
+        "    FROM\n",
+        "      zip_service_gap_index\n",
+        "    GROUP BY\n",
+        "      COALESCE(`borough`, 'Not assigned')\n",
+        "    UNION ALL\n",
+        "    SELECT\n",
+        "      'Citywide' AS borough,\n",
+        "      100.0\n",
+        "        * SUM(`restaurants_with_rodent_violation`)\n",
+        "        / NULLIF(SUM(`restaurants`), 0) AS rodent_violation_pct,\n",
+        "      SUM(`restaurants`) AS total_restaurants,\n",
+        "      SUM(`inspections`) AS total_inspections,\n",
+        "      100.0\n",
+        "        * SUM(`restaurants_with_rat_violation`)\n",
+        "        / NULLIF(SUM(`restaurants`), 0) AS rats_only_pct,\n",
+        "      1 AS sort_key\n",
+        "    FROM\n",
+        "      zip_service_gap_index\n",
+        "  ) combined\n",
+        "ORDER BY\n",
+        "  sort_key ASC,\n",
+        "  rodent_violation_pct DESC"
+      ],
+      "catalog": "workspace",
+      "schema": "default"
+    },
+    {
+      "name": "borough_metric_shares",
+      "displayName": "Borough metric shares",
+      "queryLines": [
+        "SELECT\n",
+        "  `metric`,\n",
+        "  `ord`,\n",
+        "  `borough`,\n",
+        "  `share_of_metric`,\n",
+        "  `raw_value`\n",
+        "FROM\n",
+        "  borough_metric_shares_v\n",
+        "ORDER BY\n",
+        "  `ord`"
+      ],
+      "catalog": "workspace",
+      "schema": "default"
+    },
+    {
+      "name": "borough_summary",
+      "displayName": "Borough summary",
+      "queryLines": [
+        "SELECT\n",
+        "  `borough` AS borough,\n",
+        "  COUNT_IF(`has_enough_data` = true) AS zips_scored,\n",
+        "  ROUND(\n",
+        "    SUM(`auto_closed_before_apr2026`) * 100.0 / NULLIF(SUM(`complaints_before_apr2026`), 0),\n",
+        "    1\n",
+        "  ) AS pct_auto_closed,\n",
+        "  ROUND(AVG(`median_days_to_close_after_apr2026`), 1) AS avg_zip_median_days,\n",
+        "  ROUND(\n",
+        "    SUM(`restaurants_with_rodent_violation`) * 100.0 / NULLIF(SUM(`restaurants`), 0),\n",
+        "    1\n",
+        "  ) AS pct_restaurants_cited,\n",
+        "  ROUND(\n",
+        "    SUM(\n",
+        "      CASE\n",
+        "        WHEN `has_population` = true THEN `rodent_sightings`\n",
+        "        ELSE 0\n",
+        "      END\n",
+        "    )\n",
+        "      * 10000.0\n",
+        "      / NULLIF(\n",
+        "        SUM(\n",
+        "          CASE\n",
+        "            WHEN `has_population` = true THEN `population`\n",
+        "            ELSE 0\n",
+        "          END\n",
+        "        ),\n",
+        "        0\n",
+        "      ),\n",
+        "    1\n",
+        "  ) AS complaints_per_10k,\n",
+        "  ROUND(AVG(`service_gap_index`), 1) AS avg_index\n",
+        "FROM\n",
+        "  zip_service_gap_index\n",
+        "WHERE\n",
+        "  `borough` IN ('Manhattan', 'Brooklyn', 'Queens', 'Bronx', 'Staten Island')\n",
+        "GROUP BY\n",
+        "  `borough`\n",
+        "ORDER BY\n",
+        "  avg_index DESC"
+      ],
+      "catalog": "workspace",
+      "schema": "default"
+    },
+    {
+      "name": "top_bottom_zips",
+      "displayName": "Top and bottom 10 ZIPs",
+      "queryLines": [
+        "SELECT\n",
+        "  *\n",
+        "FROM\n",
+        "  (\n",
+        "    SELECT\n",
+        "      *\n",
+        "    FROM\n",
+        "      (\n",
+        "        SELECT\n",
+        "          'Biggest gap' AS band,\n",
+        "          `zip`,\n",
+        "          `borough`,\n",
+        "          `service_gap_index`,\n",
+        "          `pct_auto_closed_before_apr2026`,\n",
+        "          `median_days_to_close_after_apr2026`,\n",
+        "          ROUND(\n",
+        "            `restaurants_with_rodent_violation` * 100.0 / NULLIF(`restaurants`, 0),\n",
+        "            1\n",
+        "          ) AS pct_cited,\n",
+        "          `restaurants`,\n",
+        "          `complaints_all`\n",
+        "        FROM\n",
+        "          zip_service_gap_index\n",
+        "        WHERE\n",
+        "          `has_enough_data` = true\n",
+        "        ORDER BY\n",
+        "          `service_gap_index` DESC\n",
+        "        LIMIT 10\n",
+        "      ) top_zips\n",
+        "    UNION ALL\n",
+        "    SELECT\n",
+        "      *\n",
+        "    FROM\n",
+        "      (\n",
+        "        SELECT\n",
+        "          'Smallest gap' AS band,\n",
+        "          `zip`,\n",
+        "          `borough`,\n",
+        "          `service_gap_index`,\n",
+        "          `pct_auto_closed_before_apr2026`,\n",
+        "          `median_days_to_close_after_apr2026`,\n",
+        "          ROUND(\n",
+        "            `restaurants_with_rodent_violation` * 100.0 / NULLIF(`restaurants`, 0),\n",
+        "            1\n",
+        "          ) AS pct_cited,\n",
+        "          `restaurants`,\n",
+        "          `complaints_all`\n",
+        "        FROM\n",
+        "          zip_service_gap_index\n",
+        "        WHERE\n",
+        "          `has_enough_data` = true\n",
+        "        ORDER BY\n",
+        "          `service_gap_index` ASC\n",
+        "        LIMIT 10\n",
+        "      ) bottom_zips\n",
+        "  )\n",
+        "ORDER BY\n",
+        "  band ASC,\n",
+        "  service_gap_index DESC"
+      ],
+      "catalog": "workspace",
+      "schema": "default"
+    },
+    {
+      "name": "scatter_calls_cited",
+      "displayName": "Scatter: 311 calls vs restaurant citations",
+      "queryLines": [
+        "WITH scored AS (\n",
+        "  SELECT\n",
+        "    `zip`,\n",
+        "    `borough`,\n",
+        "    ROUND(`rodent_sightings` * 10000.0 / NULLIF(`population`, 0), 1) AS complaints_per_10k,\n",
+        "    ROUND(100.0 * `restaurants_with_rodent_violation` / NULLIF(`restaurants`, 0), 1) AS pct_restaurants_cited\n",
+        "  FROM zip_service_gap_index\n",
+        "  WHERE `has_enough_data` = true\n",
+        "    AND `has_population` = true\n",
+        "    AND `restaurants` >= 20\n",
+        "    AND `borough` IN ('Manhattan','Brooklyn','Queens','Bronx','Staten Island')\n",
+        "),\n",
+        "cuts AS (\n",
+        "  SELECT\n",
+        "    PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY complaints_per_10k) AS med_calls,\n",
+        "    PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY pct_restaurants_cited) AS med_cited\n",
+        "  FROM scored\n",
+        ")\n",
+        "SELECT\n",
+        "  s.`zip`,\n",
+        "  s.`borough`,\n",
+        "  s.`complaints_per_10k`,\n",
+        "  s.`pct_restaurants_cited`,\n",
+        "  c.`med_calls`,\n",
+        "  c.`med_cited`,\n",
+        "  CASE\n",
+        "    WHEN s.`pct_restaurants_cited` >= c.`med_cited` AND s.`complaints_per_10k` < c.`med_calls`\n",
+        "      THEN 'Cited often, rarely called in'\n",
+        "    ELSE 'Other ZIPs'\n",
+        "  END AS quadrant\n",
+        "FROM scored s\n",
+        "CROSS JOIN cuts c"
+      ],
+      "catalog": "workspace",
+      "schema": "default"
+    },
+    {
+      "name": "three_measures",
+      "displayName": "Three measures vs typical ZIP",
+      "queryLines": [
+        "SELECT\n",
+        "  `zip`,\n",
+        "  'Complaints closed with no visit' AS measure,\n",
+        "  CAST(CONCAT(ROUND(`pct_auto_closed_before_apr2026`, 1), '%') AS STRING) AS this_zip,\n",
+        "  CAST(CONCAT(ROUND(`typical_pct_auto_closed`, 1), '%') AS STRING) AS typical_zip,\n",
+        "  CAST(CONCAT(`complaints_before_apr2026`, ' complaints') AS STRING) AS based_on\n",
+        "FROM\n",
+        "  zip_lookup_v\n",
+        "UNION ALL\n",
+        "SELECT\n",
+        "  `zip`,\n",
+        "  'Median days to close' AS measure,\n",
+        "  CAST(CONCAT(ROUND(`median_days_to_close_after_apr2026`, 1), ' days') AS STRING) AS this_zip,\n",
+        "  CAST(CONCAT(ROUND(`typical_median_days_to_close`, 1), ' days') AS STRING) AS typical_zip,\n",
+        "  CAST(CONCAT(`complaints_after_apr2026`, ' complaints') AS STRING) AS based_on\n",
+        "FROM\n",
+        "  zip_lookup_v\n",
+        "UNION ALL\n",
+        "SELECT\n",
+        "  `zip`,\n",
+        "  'Restaurants cited for rats or mice' AS measure,\n",
+        "  CAST(CONCAT(ROUND(`rodent_violation_rate_pct`, 1), '%') AS STRING) AS this_zip,\n",
+        "  CAST(CONCAT(ROUND(`typical_rodent_violation_rate`, 1), '%') AS STRING) AS typical_zip,\n",
+        "  CAST(CONCAT(`restaurants`, ' restaurants') AS STRING) AS based_on\n",
+        "FROM\n",
+        "  zip_lookup_v"
+      ],
+      "catalog": "workspace",
+      "schema": "default"
+    },
+    {
+      "name": "raw_counts",
+      "displayName": "Raw counts by ZIP",
+      "queryLines": [
+        "SELECT\n",
+        "  `zip`,\n",
+        "  CAST('Residents' AS STRING) AS metric,\n",
+        "  CAST(FORMAT_NUMBER(`population`, '#,##0') AS STRING) AS value\n",
+        "FROM\n",
+        "  zip_lookup_v\n",
+        "UNION ALL\n",
+        "SELECT\n",
+        "  `zip`,\n",
+        "  CAST('Rodent complaints (Jan 2025–Sep 2026)' AS STRING) AS metric,\n",
+        "  CAST(FORMAT_NUMBER(`rodent_sightings`, '#,##0') AS STRING) AS value\n",
+        "FROM\n",
+        "  zip_lookup_v\n",
+        "UNION ALL\n",
+        "SELECT\n",
+        "  `zip`,\n",
+        "  CAST('Conditions attracting rodents' AS STRING) AS metric,\n",
+        "  CAST(FORMAT_NUMBER(`condition_complaints`, '#,##0') AS STRING) AS value\n",
+        "FROM\n",
+        "  zip_lookup_v\n",
+        "UNION ALL\n",
+        "SELECT\n",
+        "  `zip`,\n",
+        "  CAST('Complaints still open' AS STRING) AS metric,\n",
+        "  CAST(FORMAT_NUMBER(`complaints_open`, '#,##0') AS STRING) AS value\n",
+        "FROM\n",
+        "  zip_lookup_v\n",
+        "UNION ALL\n",
+        "SELECT\n",
+        "  `zip`,\n",
+        "  CAST('Distinct locations complaints came from' AS STRING) AS metric,\n",
+        "  CAST(FORMAT_NUMBER(`distinct_locations`, '#,##0') AS STRING) AS value\n",
+        "FROM\n",
+        "  zip_lookup_v\n",
+        "UNION ALL\n",
+        "SELECT\n",
+        "  `zip`,\n",
+        "  CAST('Restaurants inspected' AS STRING) AS metric,\n",
+        "  CAST(FORMAT_NUMBER(`restaurants`, '#,##0') AS STRING) AS value\n",
+        "FROM\n",
+        "  zip_lookup_v\n",
+        "UNION ALL\n",
+        "SELECT\n",
+        "  `zip`,\n",
+        "  CAST('Restaurants cited for rats or mice' AS STRING) AS metric,\n",
+        "  CAST(FORMAT_NUMBER(`restaurants_with_rodent_violation`, '#,##0') AS STRING) AS value\n",
+        "FROM\n",
+        "  zip_lookup_v"
+      ],
+      "catalog": "workspace",
+      "schema": "default"
+    },
+    {
+      "name": "caveat",
+      "displayName": "Caveat by ZIP",
+      "queryLines": [
+        "SELECT\n",
+        "  `zip`,\n",
+        "    `not_scored_reason` AS caveat\n",
+        "FROM zip_lookup_v\n",
+        "WHERE `not_scored_reason` IS NOT NULL"
+      ],
+      "catalog": "workspace",
+      "schema": "default"
+    },
+    {
+      "name": "index_display",
+      "displayName": "Service gap index display",
+      "queryLines": [
+        "SELECT\n",
+        "  `zip`,\n",
+        "  COALESCE(CAST(ROUND(`service_gap_index`, 1) AS STRING), 'Not scored') AS `index_value`,\n",
+        "  COALESCE(CAST(`service_gap_rank` AS STRING), 'Not scored') AS `rank_value`\n",
+        "FROM\n",
+        "  zip_service_gap_index"
+      ],
+      "catalog": "workspace",
+      "schema": "default"
+    },
+    {
+      "name": "avg_index_by_borough",
+      "displayName": "Average service gap index by borough",
+      "queryLines": [
+        "SELECT\n",
+        "  `borough`,\n",
+        "  AVG(`service_gap_index`) AS `avg_index`\n",
+        "FROM\n",
+        "  zip_service_gap_index\n",
+        "WHERE\n",
+        "  `has_enough_data` = true\n",
+        "  AND `borough` IS NOT NULL\n",
+        "  AND `borough` != ''\n",
+        "GROUP BY\n",
+        "  `borough`"
+      ],
+      "catalog": "workspace",
+      "schema": "default"
     }
   ],
   "pages": [
     {
-      "name": "page1",
-      "displayName": "New Page",
+      "name": "city_overview",
+      "displayName": "City overview",
       "layout": [
         {
           "widget": {
-            "name": "bar_chart1",
+            "name": "line_monthly_close",
             "queries": [
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "dataset1",
+                  "datasetName": "rat_monthly_close",
                   "fields": [
                     {
                       "name": "borough",
                       "expression": "`borough`"
                     },
                     {
-                      "name": "avg(service_gap_index)",
-                      "expression": "AVG(`service_gap_index`)"
+                      "name": "month",
+                      "expression": "`month`"
+                    },
+                    {
+                      "name": "pct_closed_within_60s",
+                      "expression": "`pct_closed_within_60s`"
                     }
                   ],
-                  "disaggregated": false
+                  "filters": [
+                    {
+                      "expression": "`borough` IS NOT NULL AND `borough` NOT IN ('Unspecified')"
+                    },
+                    {
+                      "expression": "`month` >= '2025-01-01' AND `month` <= '2026-08-31'"
+                    }
+                  ],
+                  "disaggregated": true
                 }
               }
             ],
             "spec": {
               "frame": {
                 "showTitle": true,
-                "title": "Avg Service Gap Index by Borough"
+                "title": {
+                  "value": "Share of rodent complaints closed within 60 seconds of filing, by month",
+                  "fields": []
+                }
               },
               "version": 3,
-              "widgetType": "bar",
+              "widgetType": "line",
               "encodings": {
                 "x": {
-                  "fieldName": "borough",
+                  "fieldName": "month",
+                  "format": {
+                    "date": "locale-short-month",
+                    "type": "date"
+                  },
                   "scale": {
-                    "type": "categorical"
+                    "type": "temporal"
                   }
                 },
                 "y": {
-                  "fieldName": "avg(service_gap_index)",
+                  "fieldName": "pct_closed_within_60s",
+                  "format": {
+                    "abbreviation": "none",
+                    "decimalPlaces": {
+                      "places": 1,
+                      "type": "exact"
+                    },
+                    "type": "number-plain"
+                  },
+                  "formatTemplate": "{{ @formatted }}%",
+                  "displayName": "Closed within 60s (%)",
                   "scale": {
+                    "domain": {
+                      "max": 100,
+                      "min": 0,
+                      "type": "custom"
+                    },
                     "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "borough",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "Manhattan",
+                        "color": "#E63946"
+                      },
+                      {
+                        "value": "Brooklyn",
+                        "color": {
+                          "themeColorType": "visualizationColors",
+                          "position": 2
+                        }
+                      },
+                      {
+                        "value": "Queens",
+                        "color": {
+                          "themeColorType": "visualizationColors",
+                          "position": 5
+                        }
+                      },
+                      {
+                        "value": "Bronx",
+                        "color": {
+                          "themeColorType": "visualizationColors",
+                          "position": 1
+                        }
+                      },
+                      {
+                        "value": "Staten Island",
+                        "color": {
+                          "themeColorType": "visualizationColors",
+                          "position": 7
+                        }
+                      }
+                    ]
                   }
                 }
               },
@@ -76,45 +954,440 @@
             }
           },
           "position": {
-            "x": 3,
-            "y": 0,
-            "width": 3,
-            "height": 4
+            "x": 0,
+            "y": 16,
+            "width": 12,
+            "height": 7
           }
         },
         {
           "widget": {
-            "name": "text_box1",
-            "multilineTextboxSpec": {
-              "lines": [
-                "\n",
-                "# Dashboard for zip_service_gap_index table\n",
-                "\n",
-                "The dashboard you created for workspace.default.zip_service_gap_index is ready!\n",
-                "\n",
-                "The widget to the right of this one allows you to generate a chart based on this dataset using natural language. Click the widget to start typing a description of the chart you'd like to see. Alternatively, you can edit any selected widget using the controls in the right panel.\n",
-                "\n",
-                "You can also edit, copy, or delete any widget on the canvas.\n",
-                "    "
-              ]
+            "name": "counter_pct_auto_closed",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "zip_gap_city",
+                  "fields": [
+                    {
+                      "name": "pct_auto_closed",
+                      "expression": "`pct_auto_closed`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Complaints closed with no inspection (before Apr 20, 2026)"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "pct_auto_closed",
+                  "format": {
+                    "decimalPlaces": {
+                      "places": 1,
+                      "type": "exact"
+                    },
+                    "type": "number-percent"
+                  },
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
             }
           },
           "position": {
             "x": 0,
             "y": 0,
-            "width": 3,
-            "height": 4
+            "width": 4,
+            "height": 2
           }
         },
         {
           "widget": {
-            "name": "table1",
+            "name": "counter_quiet_zips",
             "queries": [
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "dataset1",
+                  "datasetName": "zip_gap_city",
                   "fields": [
+                    {
+                      "name": "quiet_zip_count",
+                      "expression": "`quiet_zip_count`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "ZIPs where restaurants are cited but residents rarely call"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "quiet_zip_count",
+                  "format": {
+                    "abbreviation": "none",
+                    "decimalPlaces": {
+                      "places": 0,
+                      "type": "exact"
+                    },
+                    "type": "number-plain"
+                  },
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 0,
+            "width": 4,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "counter_scored_zips",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "zip_gap_city",
+                  "fields": [
+                    {
+                      "name": "scored_zip_count",
+                      "expression": "`scored_zip_count`"
+                    },
+                    {
+                      "name": "total_zip_count",
+                      "expression": "`total_zip_count`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "ZIPs with enough data to score"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "scored_zip_count",
+                  "format": {
+                    "abbreviation": "none",
+                    "decimalPlaces": {
+                      "places": 0,
+                      "type": "exact"
+                    },
+                    "type": "number-plain"
+                  },
+                  "formatTemplate": "{{ @formatted }} of {{ total_zip_count }}",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 8,
+            "y": 0,
+            "width": 4,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "borough_ratios_bar",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "borough_ratios",
+                  "fields": [
+                    {
+                      "name": "metric",
+                      "expression": "`metric`"
+                    },
+                    {
+                      "name": "raw_ratio",
+                      "expression": "`raw_ratio`"
+                    },
+                    {
+                      "name": "borough",
+                      "expression": "`borough`"
+                    },
+                    {
+                      "name": "index_value",
+                      "expression": "`index_value`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Resident reports vs. restaurant evidence by borough (citywide = 100)",
+                  "fields": []
+                }
+              },
+              "annotations": [
+                {
+                  "encodings": {
+                    "label": {
+                      "value": "Citywide = 100"
+                    },
+                    "type": "constant",
+                    "y": {
+                      "dataValue": "100",
+                      "dataType": "DOUBLE"
+                    }
+                  },
+                  "type": "horizontal-line"
+                }
+              ],
+              "version": 3,
+              "mark": {
+                "layout": "group"
+              },
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "borough",
+                  "displayName": "Borough",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "index_value",
+                  "format": {
+                    "abbreviation": "none",
+                    "decimalPlaces": {
+                      "places": 1,
+                      "type": "exact"
+                    },
+                    "type": "number-plain"
+                  },
+                  "displayName": "Index (citywide = 100)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "metric",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "extra": [
+                  {
+                    "fieldName": "raw_ratio",
+                    "format": {
+                      "abbreviation": "none",
+                      "decimalPlaces": {
+                        "places": 4,
+                        "type": "exact"
+                      },
+                      "type": "number-plain"
+                    },
+                    "displayName": "Raw ratio"
+                  }
+                ]
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 10,
+            "width": 12,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "borough_summary_table",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "borough_summary",
+                  "fields": [
+                    {
+                      "name": "borough",
+                      "expression": "`borough`"
+                    },
+                    {
+                      "name": "zips_scored",
+                      "expression": "`zips_scored`"
+                    },
+                    {
+                      "name": "pct_auto_closed",
+                      "expression": "`pct_auto_closed`"
+                    },
+                    {
+                      "name": "avg_zip_median_days",
+                      "expression": "`avg_zip_median_days`"
+                    },
+                    {
+                      "name": "pct_restaurants_cited",
+                      "expression": "`pct_restaurants_cited`"
+                    },
+                    {
+                      "name": "complaints_per_10k",
+                      "expression": "`complaints_per_10k`"
+                    },
+                    {
+                      "name": "avg_index",
+                      "expression": "`avg_index`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Borough summary",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "borough",
+                    "displayName": "Borough"
+                  },
+                  {
+                    "fieldName": "zips_scored",
+                    "format": {
+                      "type": "number-plain",
+                      "abbreviation": "none",
+                      "decimalPlaces": {
+                        "places": 0,
+                        "type": "exact"
+                      }
+                    },
+                    "displayName": "ZIPs scored"
+                  },
+                  {
+                    "fieldName": "pct_auto_closed",
+                    "format": {
+                      "type": "number-plain",
+                      "abbreviation": "none",
+                      "decimalPlaces": {
+                        "places": 1,
+                        "type": "exact"
+                      }
+                    },
+                    "displayName": "% auto-closed"
+                  },
+                  {
+                    "fieldName": "avg_zip_median_days",
+                    "format": {
+                      "type": "number-plain",
+                      "abbreviation": "none",
+                      "decimalPlaces": {
+                        "places": 1,
+                        "type": "exact"
+                      }
+                    },
+                    "displayName": "Avg ZIP median days"
+                  },
+                  {
+                    "fieldName": "pct_restaurants_cited",
+                    "format": {
+                      "type": "number-plain",
+                      "abbreviation": "none",
+                      "decimalPlaces": {
+                        "places": 1,
+                        "type": "exact"
+                      }
+                    },
+                    "displayName": "% restaurants cited"
+                  },
+                  {
+                    "fieldName": "complaints_per_10k",
+                    "format": {
+                      "type": "number-plain",
+                      "abbreviation": "none",
+                      "decimalPlaces": {
+                        "places": 1,
+                        "type": "exact"
+                      }
+                    },
+                    "displayName": "Complaints per 10K"
+                  },
+                  {
+                    "fieldName": "avg_index",
+                    "format": {
+                      "type": "number-plain",
+                      "abbreviation": "none",
+                      "decimalPlaces": {
+                        "places": 1,
+                        "type": "exact"
+                      }
+                    },
+                    "displayName": "Avg index"
+                  }
+                ]
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 23,
+            "width": 12,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "top_bottom_zips_table",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "top_bottom_zips",
+                  "fields": [
+                    {
+                      "name": "band",
+                      "expression": "`band`"
+                    },
                     {
                       "name": "zip",
                       "expression": "`zip`"
@@ -124,36 +1397,28 @@
                       "expression": "`borough`"
                     },
                     {
-                      "name": "population",
-                      "expression": "`population`"
+                      "name": "service_gap_index",
+                      "expression": "`service_gap_index`"
                     },
                     {
-                      "name": "population_moe_pct",
-                      "expression": "`population_moe_pct`"
+                      "name": "pct_auto_closed_before_apr2026",
+                      "expression": "`pct_auto_closed_before_apr2026`"
                     },
                     {
-                      "name": "has_population",
-                      "expression": "`has_population`"
+                      "name": "median_days_to_close_after_apr2026",
+                      "expression": "`median_days_to_close_after_apr2026`"
+                    },
+                    {
+                      "name": "pct_cited",
+                      "expression": "`pct_cited`"
+                    },
+                    {
+                      "name": "restaurants",
+                      "expression": "`restaurants`"
                     },
                     {
                       "name": "complaints_all",
                       "expression": "`complaints_all`"
-                    },
-                    {
-                      "name": "rodent_sightings",
-                      "expression": "`rodent_sightings`"
-                    },
-                    {
-                      "name": "rat_sightings",
-                      "expression": "`rat_sightings`"
-                    },
-                    {
-                      "name": "condition_complaints",
-                      "expression": "`condition_complaints`"
-                    },
-                    {
-                      "name": "distinct_locations",
-                      "expression": "`distinct_locations`"
                     }
                   ],
                   "disaggregated": true
@@ -161,281 +1426,97 @@
               }
             ],
             "spec": {
-              "version": 1,
-              "invisibleColumns": [],
-              "allowHTMLByDefault": false,
-              "itemsPerPage": 25,
-              "paginationSize": "default",
-              "condensed": true,
-              "withRowNumber": false,
+              "frame": {
+                "showTitle": true,
+                "title": "Top and bottom 10 ZIPs"
+              },
+              "version": 2,
               "widgetType": "table",
               "encodings": {
                 "columns": [
                   {
+                    "fieldName": "band",
+                    "displayName": "Band"
+                  },
+                  {
                     "fieldName": "zip",
-                    "booleanValues": [
-                      "false",
-                      "true"
-                    ],
-                    "imageUrlTemplate": "{{ @ }}",
-                    "imageTitleTemplate": "{{ @ }}",
-                    "imageWidth": "",
-                    "imageHeight": "",
-                    "linkUrlTemplate": "{{ @ }}",
-                    "linkTextTemplate": "{{ @ }}",
-                    "linkTitleTemplate": "{{ @ }}",
-                    "linkOpenInNewTab": true,
-                    "type": "string",
-                    "displayAs": "string",
-                    "visible": true,
-                    "order": 100000,
-                    "title": "zip",
-                    "allowSearch": false,
-                    "alignContent": "left",
-                    "allowHTML": false,
-                    "highlightLinks": false,
-                    "useMonospaceFont": false,
-                    "preserveWhitespace": false
+                    "displayName": "ZIP"
                   },
                   {
                     "fieldName": "borough",
-                    "booleanValues": [
-                      "false",
-                      "true"
-                    ],
-                    "imageUrlTemplate": "{{ @ }}",
-                    "imageTitleTemplate": "{{ @ }}",
-                    "imageWidth": "",
-                    "imageHeight": "",
-                    "linkUrlTemplate": "{{ @ }}",
-                    "linkTextTemplate": "{{ @ }}",
-                    "linkTitleTemplate": "{{ @ }}",
-                    "linkOpenInNewTab": true,
-                    "type": "string",
-                    "displayAs": "string",
-                    "visible": true,
-                    "order": 100001,
-                    "title": "borough",
-                    "allowSearch": false,
-                    "alignContent": "left",
-                    "allowHTML": false,
-                    "highlightLinks": false,
-                    "useMonospaceFont": false,
-                    "preserveWhitespace": false
+                    "displayName": "Borough"
                   },
                   {
-                    "fieldName": "population",
-                    "numberFormat": "0",
-                    "booleanValues": [
-                      "false",
-                      "true"
-                    ],
-                    "imageUrlTemplate": "{{ @ }}",
-                    "imageTitleTemplate": "{{ @ }}",
-                    "imageWidth": "",
-                    "imageHeight": "",
-                    "linkUrlTemplate": "{{ @ }}",
-                    "linkTextTemplate": "{{ @ }}",
-                    "linkTitleTemplate": "{{ @ }}",
-                    "linkOpenInNewTab": true,
-                    "type": "integer",
-                    "displayAs": "number",
-                    "visible": true,
-                    "order": 100002,
-                    "title": "population",
-                    "allowSearch": false,
-                    "alignContent": "right",
-                    "allowHTML": false,
-                    "highlightLinks": false,
-                    "useMonospaceFont": false,
-                    "preserveWhitespace": false
+                    "fieldName": "service_gap_index",
+                    "format": {
+                      "type": "number-plain",
+                      "abbreviation": "none",
+                      "decimalPlaces": {
+                        "places": 1,
+                        "type": "exact"
+                      }
+                    },
+                    "displayName": "Service gap index"
                   },
                   {
-                    "fieldName": "population_moe_pct",
-                    "booleanValues": [
-                      "false",
-                      "true"
-                    ],
-                    "imageUrlTemplate": "{{ @ }}",
-                    "imageTitleTemplate": "{{ @ }}",
-                    "imageWidth": "",
-                    "imageHeight": "",
-                    "linkUrlTemplate": "{{ @ }}",
-                    "linkTextTemplate": "{{ @ }}",
-                    "linkTitleTemplate": "{{ @ }}",
-                    "linkOpenInNewTab": true,
-                    "type": "decimal",
-                    "displayAs": "number",
-                    "visible": true,
-                    "order": 100003,
-                    "title": "population_moe_pct",
-                    "allowSearch": false,
-                    "alignContent": "right",
-                    "allowHTML": false,
-                    "highlightLinks": false,
-                    "useMonospaceFont": false,
-                    "preserveWhitespace": false
+                    "fieldName": "pct_auto_closed_before_apr2026",
+                    "format": {
+                      "type": "number-plain",
+                      "abbreviation": "none",
+                      "decimalPlaces": {
+                        "places": 1,
+                        "type": "exact"
+                      }
+                    },
+                    "displayName": "% auto-closed"
                   },
                   {
-                    "fieldName": "has_population",
-                    "booleanValues": [
-                      "false",
-                      "true"
-                    ],
-                    "imageUrlTemplate": "{{ @ }}",
-                    "imageTitleTemplate": "{{ @ }}",
-                    "imageWidth": "",
-                    "imageHeight": "",
-                    "linkUrlTemplate": "{{ @ }}",
-                    "linkTextTemplate": "{{ @ }}",
-                    "linkTitleTemplate": "{{ @ }}",
-                    "linkOpenInNewTab": true,
-                    "type": "boolean",
-                    "displayAs": "boolean",
-                    "visible": true,
-                    "order": 100004,
-                    "title": "has_population",
-                    "allowSearch": false,
-                    "alignContent": "right",
-                    "allowHTML": false,
-                    "highlightLinks": false,
-                    "useMonospaceFont": false,
-                    "preserveWhitespace": false
+                    "fieldName": "median_days_to_close_after_apr2026",
+                    "format": {
+                      "type": "number-plain",
+                      "abbreviation": "none",
+                      "decimalPlaces": {
+                        "places": 1,
+                        "type": "exact"
+                      }
+                    },
+                    "displayName": "Median days to close"
+                  },
+                  {
+                    "fieldName": "pct_cited",
+                    "format": {
+                      "type": "number-plain",
+                      "abbreviation": "none",
+                      "decimalPlaces": {
+                        "places": 1,
+                        "type": "exact"
+                      }
+                    },
+                    "displayName": "% cited"
+                  },
+                  {
+                    "fieldName": "restaurants",
+                    "format": {
+                      "type": "number-plain",
+                      "abbreviation": "none",
+                      "decimalPlaces": {
+                        "places": 0,
+                        "type": "exact"
+                      }
+                    },
+                    "displayName": "Restaurants"
                   },
                   {
                     "fieldName": "complaints_all",
-                    "numberFormat": "0",
-                    "booleanValues": [
-                      "false",
-                      "true"
-                    ],
-                    "imageUrlTemplate": "{{ @ }}",
-                    "imageTitleTemplate": "{{ @ }}",
-                    "imageWidth": "",
-                    "imageHeight": "",
-                    "linkUrlTemplate": "{{ @ }}",
-                    "linkTextTemplate": "{{ @ }}",
-                    "linkTitleTemplate": "{{ @ }}",
-                    "linkOpenInNewTab": true,
-                    "type": "integer",
-                    "displayAs": "number",
-                    "visible": true,
-                    "order": 100005,
-                    "title": "complaints_all",
-                    "allowSearch": false,
-                    "alignContent": "right",
-                    "allowHTML": false,
-                    "highlightLinks": false,
-                    "useMonospaceFont": false,
-                    "preserveWhitespace": false
-                  },
-                  {
-                    "fieldName": "rodent_sightings",
-                    "numberFormat": "0",
-                    "booleanValues": [
-                      "false",
-                      "true"
-                    ],
-                    "imageUrlTemplate": "{{ @ }}",
-                    "imageTitleTemplate": "{{ @ }}",
-                    "imageWidth": "",
-                    "imageHeight": "",
-                    "linkUrlTemplate": "{{ @ }}",
-                    "linkTextTemplate": "{{ @ }}",
-                    "linkTitleTemplate": "{{ @ }}",
-                    "linkOpenInNewTab": true,
-                    "type": "integer",
-                    "displayAs": "number",
-                    "visible": true,
-                    "order": 100006,
-                    "title": "rodent_sightings",
-                    "allowSearch": false,
-                    "alignContent": "right",
-                    "allowHTML": false,
-                    "highlightLinks": false,
-                    "useMonospaceFont": false,
-                    "preserveWhitespace": false
-                  },
-                  {
-                    "fieldName": "rat_sightings",
-                    "numberFormat": "0",
-                    "booleanValues": [
-                      "false",
-                      "true"
-                    ],
-                    "imageUrlTemplate": "{{ @ }}",
-                    "imageTitleTemplate": "{{ @ }}",
-                    "imageWidth": "",
-                    "imageHeight": "",
-                    "linkUrlTemplate": "{{ @ }}",
-                    "linkTextTemplate": "{{ @ }}",
-                    "linkTitleTemplate": "{{ @ }}",
-                    "linkOpenInNewTab": true,
-                    "type": "integer",
-                    "displayAs": "number",
-                    "visible": true,
-                    "order": 100007,
-                    "title": "rat_sightings",
-                    "allowSearch": false,
-                    "alignContent": "right",
-                    "allowHTML": false,
-                    "highlightLinks": false,
-                    "useMonospaceFont": false,
-                    "preserveWhitespace": false
-                  },
-                  {
-                    "fieldName": "condition_complaints",
-                    "numberFormat": "0",
-                    "booleanValues": [
-                      "false",
-                      "true"
-                    ],
-                    "imageUrlTemplate": "{{ @ }}",
-                    "imageTitleTemplate": "{{ @ }}",
-                    "imageWidth": "",
-                    "imageHeight": "",
-                    "linkUrlTemplate": "{{ @ }}",
-                    "linkTextTemplate": "{{ @ }}",
-                    "linkTitleTemplate": "{{ @ }}",
-                    "linkOpenInNewTab": true,
-                    "type": "integer",
-                    "displayAs": "number",
-                    "visible": true,
-                    "order": 100008,
-                    "title": "condition_complaints",
-                    "allowSearch": false,
-                    "alignContent": "right",
-                    "allowHTML": false,
-                    "highlightLinks": false,
-                    "useMonospaceFont": false,
-                    "preserveWhitespace": false
-                  },
-                  {
-                    "fieldName": "distinct_locations",
-                    "numberFormat": "0",
-                    "booleanValues": [
-                      "false",
-                      "true"
-                    ],
-                    "imageUrlTemplate": "{{ @ }}",
-                    "imageTitleTemplate": "{{ @ }}",
-                    "imageWidth": "",
-                    "imageHeight": "",
-                    "linkUrlTemplate": "{{ @ }}",
-                    "linkTextTemplate": "{{ @ }}",
-                    "linkTitleTemplate": "{{ @ }}",
-                    "linkOpenInNewTab": true,
-                    "type": "integer",
-                    "displayAs": "number",
-                    "visible": true,
-                    "order": 100009,
-                    "title": "distinct_locations",
-                    "allowSearch": false,
-                    "alignContent": "right",
-                    "allowHTML": false,
-                    "highlightLinks": false,
-                    "useMonospaceFont": false,
-                    "preserveWhitespace": false
+                    "format": {
+                      "type": "number-plain",
+                      "abbreviation": "none",
+                      "decimalPlaces": {
+                        "places": 0,
+                        "type": "exact"
+                      }
+                    },
+                    "displayName": "Complaints"
                   }
                 ]
               },
@@ -446,33 +1527,355 @@
           },
           "position": {
             "x": 0,
-            "y": 4,
-            "width": 6,
-            "height": 6
+            "y": 36,
+            "width": 12,
+            "height": 12
           }
-        }
-      ],
-      "pageType": "PAGE_TYPE_CANVAS"
-    },
-    {
-      "name": "27dd7d6f",
-      "displayName": "Global Filters",
-      "layout": [
+        },
         {
           "widget": {
-            "name": "boro",
+            "name": "scatter_calls_cited",
             "queries": [
               {
-                "name": "dashboards/01f1b4778c6c12a6bd8380fc92822f7c/datasets/01f1b4778c6c187c9ebd619d505701f6_borough",
+                "name": "main_query",
                 "query": {
-                  "datasetName": "dataset1",
+                  "datasetName": "scatter_calls_cited",
+                  "fields": [
+                    {
+                      "name": "quadrant",
+                      "expression": "`quadrant`"
+                    },
+                    {
+                      "name": "zip",
+                      "expression": "`zip`"
+                    },
+                    {
+                      "name": "borough",
+                      "expression": "`borough`"
+                    },
+                    {
+                      "name": "complaints_per_10k",
+                      "expression": "`complaints_per_10k`"
+                    },
+                    {
+                      "name": "pct_restaurants_cited",
+                      "expression": "`pct_restaurants_cited`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Restaurant rodent citations vs. 311 calls, by ZIP"
+              },
+              "version": 3,
+              "widgetType": "scatter",
+              "encodings": {
+                "x": {
+                  "fieldName": "complaints_per_10k",
+                  "format": {
+                    "abbreviation": "none",
+                    "decimalPlaces": {
+                      "places": 1,
+                      "type": "exact"
+                    },
+                    "type": "number-plain"
+                  },
+                  "displayName": "311 complaints per 10K residents",
+                  "scale": {
+                    "fn": {
+                      "type": "symlog"
+                    },
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "pct_restaurants_cited",
+                  "format": {
+                    "abbreviation": "none",
+                    "decimalPlaces": {
+                      "places": 1,
+                      "type": "exact"
+                    },
+                    "type": "number-plain"
+                  },
+                  "displayName": "% restaurants cited",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "quadrant",
+                  "scale": {
+                    "mappings": [
+                      {
+                        "color": "#E63946",
+                        "value": "Cited often, rarely called in"
+                      },
+                      {
+                        "color": "#C8C8C8",
+                        "value": "Other ZIPs"
+                      }
+                    ],
+                    "type": "categorical"
+                  }
+                },
+                "extra": [
+                  {
+                    "fieldName": "zip",
+                    "displayName": "ZIP"
+                  },
+                  {
+                    "fieldName": "borough",
+                    "displayName": "Borough"
+                  }
+                ]
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 28,
+            "width": 12,
+            "height": 8
+          }
+        },
+        {
+          "widget": {
+            "name": "avg_index_bar",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "avg_index_by_borough",
                   "fields": [
                     {
                       "name": "borough",
                       "expression": "`borough`"
                     },
                     {
-                      "name": "borough_associativity",
+                      "name": "avg_index",
+                      "expression": "`avg_index`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Average service gap index by borough"
+              },
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "borough",
+                  "displayName": "Borough",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "avg_index",
+                  "format": {
+                    "abbreviation": "none",
+                    "decimalPlaces": {
+                      "places": 1,
+                      "type": "exact"
+                    },
+                    "type": "number-plain"
+                  },
+                  "displayName": "Average service gap index",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "borough",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 12,
+            "height": 8
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    },
+    {
+      "name": "551a3b70",
+      "displayName": "Look up your ZIP",
+      "layout": [
+        {
+          "widget": {
+            "name": "zip_filter",
+            "queries": [
+              {
+                "name": "dashboards/01f1b45a177217f993a686b781c1635c/datasets/01f1b45bd4e419a6a8524da30c6c1cf2_zip",
+                "query": {
+                  "datasetName": "zip_gap_main",
+                  "fields": [
+                    {
+                      "name": "zip",
+                      "expression": "`zip`"
+                    },
+                    {
+                      "name": "zip_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "dashboards/01f1b45a177217f993a686b781c1635c/datasets/01f1b46b451011b4af2f6ef622661dff_zip",
+                "query": {
+                  "datasetName": "zip_lookup",
+                  "fields": [
+                    {
+                      "name": "zip",
+                      "expression": "`zip`"
+                    },
+                    {
+                      "name": "zip_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "dashboards/01f1b45a177217f993a686b781c1635c/datasets/01f1b46db58b1373b9ac34778ea2c11f_zip",
+                "query": {
+                  "datasetName": "zip_measures",
+                  "fields": [
+                    {
+                      "name": "zip",
+                      "expression": "`zip`"
+                    },
+                    {
+                      "name": "zip_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "dashboards/01f1b45a177217f993a686b781c1635c/datasets/01f1b470459d1216ba7dcd615ca75ec4_zip",
+                "query": {
+                  "datasetName": "zip_details",
+                  "fields": [
+                    {
+                      "name": "zip",
+                      "expression": "`zip`"
+                    },
+                    {
+                      "name": "zip_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "dashboards/01f1b45a177217f993a686b781c1635c/datasets/01f1b470948913018ca00bea6c45e267_zip",
+                "query": {
+                  "datasetName": "zip_warnings",
+                  "fields": [
+                    {
+                      "name": "zip",
+                      "expression": "`zip`"
+                    },
+                    {
+                      "name": "zip_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "dashboards/01f1b45a177217f993a686b781c1635c/datasets/01f1b496ab341d049545a297cfea6dd9_zip",
+                "query": {
+                  "datasetName": "three_measures",
+                  "fields": [
+                    {
+                      "name": "zip",
+                      "expression": "`zip`"
+                    },
+                    {
+                      "name": "zip_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "dashboards/01f1b45a177217f993a686b781c1635c/datasets/01f1b497259a11f39478178abe23a712_zip",
+                "query": {
+                  "datasetName": "caveat",
+                  "fields": [
+                    {
+                      "name": "zip",
+                      "expression": "`zip`"
+                    },
+                    {
+                      "name": "zip_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "dashboards/01f1b45a177217f993a686b781c1635c/datasets/01f1b49847a4128f9c8842e1154e72c2_zip",
+                "query": {
+                  "datasetName": "index_display",
+                  "fields": [
+                    {
+                      "name": "zip",
+                      "expression": "`zip`"
+                    },
+                    {
+                      "name": "zip_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "dashboards/01f1b45a177217f993a686b781c1635c/datasets/01f1b49700741e78bc23449e4482e4d2_zip",
+                "query": {
+                  "datasetName": "raw_counts",
+                  "fields": [
+                    {
+                      "name": "zip",
+                      "expression": "`zip`"
+                    },
+                    {
+                      "name": "zip_associativity",
                       "expression": "COUNT_IF(`associative_filter_predicate_group`)"
                     }
                   ],
@@ -481,11 +1884,25 @@
               }
             ],
             "spec": {
+              "disallowAll": true,
               "version": 2,
+              "selection": {
+                "defaultSelection": {
+                  "values": {
+                    "dataType": "STRING",
+                    "values": [
+                      {
+                        "value": "10025"
+                      }
+                    ]
+                  }
+                }
+              },
               "frame": {
                 "showTitle": true,
+                "showDescription": false,
                 "title": {
-                  "value": "Boro",
+                  "value": "Find your ZIP",
                   "fields": []
                 }
               },
@@ -493,8 +1910,40 @@
               "encodings": {
                 "fields": [
                   {
-                    "fieldName": "borough",
-                    "queryName": "dashboards/01f1b4778c6c12a6bd8380fc92822f7c/datasets/01f1b4778c6c187c9ebd619d505701f6_borough"
+                    "fieldName": "zip",
+                    "queryName": "dashboards/01f1b45a177217f993a686b781c1635c/datasets/01f1b45bd4e419a6a8524da30c6c1cf2_zip"
+                  },
+                  {
+                    "fieldName": "zip",
+                    "queryName": "dashboards/01f1b45a177217f993a686b781c1635c/datasets/01f1b46b451011b4af2f6ef622661dff_zip"
+                  },
+                  {
+                    "fieldName": "zip",
+                    "queryName": "dashboards/01f1b45a177217f993a686b781c1635c/datasets/01f1b46db58b1373b9ac34778ea2c11f_zip"
+                  },
+                  {
+                    "fieldName": "zip",
+                    "queryName": "dashboards/01f1b45a177217f993a686b781c1635c/datasets/01f1b470459d1216ba7dcd615ca75ec4_zip"
+                  },
+                  {
+                    "fieldName": "zip",
+                    "queryName": "dashboards/01f1b45a177217f993a686b781c1635c/datasets/01f1b470948913018ca00bea6c45e267_zip"
+                  },
+                  {
+                    "fieldName": "zip",
+                    "queryName": "dashboards/01f1b45a177217f993a686b781c1635c/datasets/01f1b496ab341d049545a297cfea6dd9_zip"
+                  },
+                  {
+                    "fieldName": "zip",
+                    "queryName": "dashboards/01f1b45a177217f993a686b781c1635c/datasets/01f1b497259a11f39478178abe23a712_zip"
+                  },
+                  {
+                    "fieldName": "zip",
+                    "queryName": "dashboards/01f1b45a177217f993a686b781c1635c/datasets/01f1b49847a4128f9c8842e1154e72c2_zip"
+                  },
+                  {
+                    "fieldName": "zip",
+                    "queryName": "dashboards/01f1b45a177217f993a686b781c1635c/datasets/01f1b49700741e78bc23449e4482e4d2_zip"
                   }
                 ]
               }
@@ -503,101 +1952,466 @@
           "position": {
             "x": 0,
             "y": 0,
-            "width": 1,
-            "height": 2
+            "width": 6,
+            "height": 1
           }
         },
         {
           "widget": {
-            "name": "3a1970b7",
+            "name": "eb43d93c",
             "queries": [
               {
-                "name": "dashboards/01f1b4778c6c12a6bd8380fc92822f7c/datasets/01f1b4778c6c187c9ebd619d505701f6_slow_response_score",
+                "name": "main_query",
                 "query": {
-                  "datasetName": "dataset1",
+                  "datasetName": "zip_lookup",
                   "fields": [
                     {
-                      "name": "slow_response_score",
-                      "expression": "`slow_response_score`"
-                    },
-                    {
-                      "name": "slow_response_score_associativity",
-                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                      "name": "service_gap_label",
+                      "expression": "`service_gap_label`"
                     }
                   ],
-                  "disaggregated": false
+                  "disaggregated": true
                 }
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "showTitle": true
+                "showTitle": false,
+                "title": ""
               },
-              "widgetType": "filter-single-select",
+              "version": 2,
+              "widgetType": "counter",
               "encodings": {
-                "fields": [
+                "value": {
+                  "fieldName": "service_gap_label",
+                  "displayName": ""
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 0,
+            "width": 6,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "summary_sentence",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "zip_lookup",
+                  "fields": [
+                    {
+                      "name": "summary_sentence",
+                      "expression": "`summary_sentence`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": false,
+                "title": ""
+              },
+              "headerHeight": 0,
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
                   {
-                    "fieldName": "slow_response_score",
-                    "queryName": "dashboards/01f1b4778c6c12a6bd8380fc92822f7c/datasets/01f1b4778c6c187c9ebd619d505701f6_slow_response_score"
+                    "fieldName": "summary_sentence",
+                    "displayName": ""
                   }
                 ]
+              },
+              "data": {
+                "queryName": "main_query"
               }
             }
           },
           "position": {
             "x": 0,
-            "y": 2,
-            "width": 1,
+            "y": 1,
+            "width": 12,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "counter_rank_display",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "index_display",
+                  "fields": [
+                    {
+                      "name": "rank_value",
+                      "expression": "`rank_value`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Rank among scored ZIPs"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "rank_value",
+                  "displayName": ""
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 4,
+            "width": 3,
             "height": 2
           }
         },
         {
           "widget": {
-            "name": "00c5fb43",
+            "name": "counter_auto_closed_display",
             "queries": [
               {
-                "name": "dashboards/01f1b4778c6c12a6bd8380fc92822f7c/datasets/01f1b4778c6c187c9ebd619d505701f6_service_gap_rank",
+                "name": "main_query",
                 "query": {
-                  "datasetName": "dataset1",
+                  "datasetName": "zip_lookup",
                   "fields": [
                     {
-                      "name": "min(service_gap_rank)",
-                      "expression": "MIN(`service_gap_rank`)"
-                    },
-                    {
-                      "name": "max(service_gap_rank)",
-                      "expression": "MAX(`service_gap_rank`)"
+                      "name": "pct_auto_closed_before_apr2026",
+                      "expression": "`pct_auto_closed_before_apr2026`"
                     }
                   ],
-                  "disaggregated": false
+                  "disaggregated": true
                 }
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "showTitle": true
+                "showTitle": true,
+                "title": "Complaints closed with no visit"
               },
-              "widgetType": "range-slider",
+              "version": 2,
+              "widgetType": "counter",
               "encodings": {
-                "fields": [
+                "value": {
+                  "fieldName": "pct_auto_closed_before_apr2026",
+                  "format": {
+                    "abbreviation": "none",
+                    "decimalPlaces": {
+                      "places": 1,
+                      "type": "exact"
+                    },
+                    "type": "number-plain"
+                  },
+                  "formatTemplate": "{{ @formatted }}%",
+                  "displayName": ""
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 4,
+            "width": 3,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "counter_days_display",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "zip_lookup",
+                  "fields": [
+                    {
+                      "name": "median_days_to_close_after_apr2026",
+                      "expression": "`median_days_to_close_after_apr2026`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Median days to close (after Apr 20)"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "median_days_to_close_after_apr2026",
+                  "format": {
+                    "abbreviation": "none",
+                    "decimalPlaces": {
+                      "places": 1,
+                      "type": "exact"
+                    },
+                    "type": "number-plain"
+                  },
+                  "displayName": ""
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 4,
+            "width": 3,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "three_measures_table",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "three_measures",
+                  "fields": [
+                    {
+                      "name": "measure",
+                      "expression": "`measure`"
+                    },
+                    {
+                      "name": "this_zip",
+                      "expression": "`this_zip`"
+                    },
+                    {
+                      "name": "typical_zip",
+                      "expression": "`typical_zip`"
+                    },
+                    {
+                      "name": "based_on",
+                      "expression": "`based_on`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "The three measures (typical ZIP = median of scored ZIPs)"
+              },
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
                   {
-                    "fieldName": "service_gap_rank",
-                    "queryName": "dashboards/01f1b4778c6c12a6bd8380fc92822f7c/datasets/01f1b4778c6c187c9ebd619d505701f6_service_gap_rank"
+                    "fieldName": "measure",
+                    "displayName": "Measure"
+                  },
+                  {
+                    "fieldName": "this_zip",
+                    "displayName": "This ZIP"
+                  },
+                  {
+                    "fieldName": "typical_zip",
+                    "displayName": "Typical ZIP"
+                  },
+                  {
+                    "fieldName": "based_on",
+                    "displayName": "Based on"
                   }
                 ]
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 6,
+            "width": 12,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "raw_counts_table",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "raw_counts",
+                  "fields": [
+                    {
+                      "name": "metric",
+                      "expression": "`metric`"
+                    },
+                    {
+                      "name": "value",
+                      "expression": "`value`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "What's actually in this ZIP",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "metric",
+                    "displayName": "Metric"
+                  },
+                  {
+                    "fieldName": "value",
+                    "displayName": "Value"
+                  }
+                ]
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 10,
+            "width": 12,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "caveat_table",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "caveat",
+                  "fields": [
+                    {
+                      "name": "caveat",
+                      "expression": "`caveat`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": false,
+                "title": ""
+              },
+              "headerHeight": 0,
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "caveat",
+                    "displayName": ""
+                  }
+                ]
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 15,
+            "width": 12,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "counter_index_display",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "index_display",
+                  "fields": [
+                    {
+                      "name": "index_value",
+                      "expression": "`index_value`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Service gap index (0-100, higher = bigger gap)"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "index_value",
+                  "displayName": ""
+                }
+              },
+              "data": {
+                "queryName": "main_query"
               }
             }
           },
           "position": {
             "x": 0,
             "y": 4,
-            "width": 1,
+            "width": 3,
             "height": 2
           }
         }
       ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    },
+    {
+      "name": "global_filters",
+      "displayName": "Global Filters",
       "pageType": "PAGE_TYPE_GLOBAL_FILTERS",
       "layoutVersion": "GRID_V1"
     }

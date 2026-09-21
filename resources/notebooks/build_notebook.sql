@@ -2,7 +2,7 @@
 -- MAGIC %md
 -- MAGIC # Build Notebook (DDL/DML statements)
 -- MAGIC Builds the clean tables and the ZIP Service Gap Index from the raw uploads, in dependency order:
--- MAGIC `raw` → (1 complaints, 2 violations, 3b population) → 3 restaurants → 4 index → 5 sanity checks.
+-- MAGIC `raw` → (1 complaints, 2 violations, 3b population) → 3 restaurants → 4 index → 4b dashboard views → 5 sanity checks.
 -- MAGIC
 -- MAGIC Every CREATE cell also re-applies its table and column COMMENTs so a rebuild never strips the descriptions Genie reads.
 -- MAGIC Run All from the top; Cell 5 shows `actual` vs `expected` for every table.
@@ -360,6 +360,169 @@ ALTER TABLE workspace.default.zip_service_gap_index ALTER COLUMN service_gap_lab
 -- COMMAND ----------
 
 -- MAGIC %md
+-- MAGIC ## CELL 4b: Dashboard views
+-- MAGIC The NYC Service Gap Dashboard reads two views on top of `zip_service_gap_index` and the raw `rat_sightings` table:
+-- MAGIC `zip_lookup_v` (per-ZIP text, typical values and not-scored reasons for the "Look up your ZIP" page) and
+-- MAGIC `borough_metric_shares_v` (each borough's share of five citywide metrics). Definitions are copied verbatim from the source workspace.
+
+-- COMMAND ----------
+
+CREATE OR REPLACE VIEW workspace.default.zip_lookup_v (
+  zip COMMENT '5-digit NYC ZIP code (string). Primary key.',
+  borough COMMENT 'Borough: Manhattan, Brooklyn, Queens, Bronx, Staten Island.',
+  population COMMENT 'Estimated residents (ACS). NULL if no estimate.',
+  population_moe_pct COMMENT 'Population margin of error as a percent of population.',
+  has_population COMMENT 'TRUE if population is at least 1,000, so per-10k-resident rates are shown.',
+  complaints_all COMMENT 'All 311 rodent complaints in the ZIP, Jan 2025 to Sep 2026 (all four descriptors).',
+  rodent_sightings COMMENT 'Complaints that are Rat Sighting, Mouse Sighting, or Signs of Rodents (our rodent complaint definition).',
+  rat_sightings COMMENT 'Complaints with descriptor Rat Sighting only.',
+  condition_complaints COMMENT 'Complaints with descriptor Condition Attracting Rodents (garbage/harborage, not a sighting).',
+  distinct_locations COMMENT 'Number of distinct lat/long points complaints came from. Compare to complaints_all to spot repeat callers.',
+  top_location_share_pct COMMENT 'Percent of the ZIP''s complaints that came from its single busiest location. High values (e.g. 82% in 10035) mean one building drives the count.',
+  complaints_open COMMENT 'Complaints still In Progress.',
+  complaints_before_apr2026 COMMENT 'Complaints filed before 2026-04-20, when the city still auto-closed complaints.',
+  auto_closed_before_apr2026 COMMENT 'Of those, how many were closed within 60 seconds with no inspection.',
+  pct_auto_closed_before_apr2026 COMMENT 'Percent of pre-2026-04-20 complaints closed without a visit. Citywide about 60%. Higher = city showed up less. Component 1 of the index.',
+  complaints_after_apr2026 COMMENT 'Complaints filed 2026-04-20 to 2026-07-31 (after auto-closing stopped; Aug/Sep excluded as too recent to be closed).',
+  median_days_to_close_after_apr2026 COMMENT 'Median days to close a complaint filed 2026-04-20 to 2026-07-31. Citywide about 10 days. Higher = slower. Component 2 of the index.',
+  restaurants COMMENT 'Distinct restaurants (camis) inspected in the ZIP, Jan 2025 to Sep 2026.',
+  inspections COMMENT 'Total restaurant inspections in the ZIP.',
+  restaurants_with_rodent_violation COMMENT 'Restaurants cited at least once for rats (04K) or mice (04L).',
+  restaurants_with_rat_violation COMMENT 'Restaurants cited at least once for rats (04K).',
+  rodent_violation_rate_pct COMMENT 'Percent of the ZIP''s restaurants cited for rats or mice. Independent evidence of rodent presence that does not depend on who calls 311. Citywide about 24%. Component 3 of the index.',
+  complaints_per_100_restaurants COMMENT 'Complaints per 100 restaurants. Context only.',
+  complaints_per_10k_residents COMMENT 'All rodent complaints per 10,000 residents, Jan 2025 to Sep 2026. NULL when has_population is FALSE. Measures how much a ZIP calls 311, not how many rats it has.',
+  rodent_sightings_per_10k_residents COMMENT 'Rodent sightings (Rat, Mouse, Signs of Rodents) per 10,000 residents. Citywide about 50. Manhattan about 69, Queens about 30. NULL when has_population is FALSE.',
+  restaurants_per_10k_residents COMMENT 'Inspected restaurants per 10,000 residents. High values mean a commercial ZIP.',
+  has_enough_data COMMENT 'TRUE if the ZIP has at least 30 complaints, 10 restaurants, 20 pre-April-2026 complaints and 5 post-April-2026 complaints. Only these ZIPs get an index and rank.',
+  no_show_score COMMENT 'Percentile rank (0 best to 1 worst) of pct_auto_closed_before_apr2026 among ranked ZIPs.',
+  slow_response_score COMMENT 'Percentile rank (0 best to 1 worst) of median_days_to_close_after_apr2026 among ranked ZIPs.',
+  rodent_need_score COMMENT 'Percentile rank (0 lowest to 1 highest) of rodent_violation_rate_pct among ranked ZIPs.',
+  service_gap_index COMMENT 'Service Gap Index 0-100 = average of no_show_score, slow_response_score and rodent_need_score times 100. Higher = bigger gap between rodent need and city response. NULL when has_enough_data is FALSE.',
+  service_gap_rank COMMENT 'Rank of the ZIP by service_gap_index, 1 = largest gap (worst served). NULL when not enough data.',
+  zips_ranked COMMENT 'Total number of ZIPs that received a rank (denominator for service_gap_rank).',
+  is_quiet_zip COMMENT 'TRUE if inspectors find rodents at an above-median share of the ZIP''s restaurants but residents call 311 at a below-median per-capita rate. These ZIPs likely under-report and are invisible to a complaint-count map.',
+  service_gap_label COMMENT 'Plain-English label: Large, Moderate, Small service gap, or Not enough data to rank this ZIP.',
+  not_scored_reason,
+  is_borderline,
+  typical_pct_auto_closed,
+  typical_median_days_to_close,
+  typical_rodent_violation_rate,
+  summary_sentence,
+  population_text)
+WITH SCHEMA COMPENSATION
+AS WITH typical AS (
+  SELECT
+    percentile_approx(CAST(pct_auto_closed_before_apr2026 AS DOUBLE), 0.5) AS typical_pct_auto_closed,
+    percentile_approx(median_days_to_close_after_apr2026, 0.5) AS typical_median_days_to_close,
+    percentile_approx(CAST(rodent_violation_rate_pct AS DOUBLE), 0.5) AS typical_rodent_violation_rate
+  FROM workspace.default.zip_service_gap_index
+  WHERE has_enough_data = TRUE
+),
+checks AS (
+  SELECT
+    z.*,
+    (COALESCE(complaints_all, 0) < 30) AS fail_total,
+    (COALESCE(restaurants, 0) < 10) AS fail_rest,
+    (COALESCE(complaints_before_apr2026, 0) < 20) AS fail_before,
+    (COALESCE(complaints_after_apr2026, 0) < 5) AS fail_after
+  FROM workspace.default.zip_service_gap_index z
+),
+reasons AS (
+  SELECT
+    c.*,
+    concat_ws('; ',
+      CASE WHEN fail_total THEN concat(COALESCE(complaints_all, 0), ' complaints in total, needs 30') END,
+      CASE WHEN fail_rest THEN concat(COALESCE(restaurants, 0), ' inspected restaurants, needs 10') END,
+      CASE WHEN fail_before THEN concat(COALESCE(complaints_before_apr2026, 0), ' complaints filed before April 20, 2026, needs 20, so the share auto-closed is unreliable') END,
+      CASE WHEN fail_after THEN concat(COALESCE(complaints_after_apr2026, 0), ' complaints filed April 20 to July 31, 2026, needs 5, so median time to close is unreliable') END
+    ) AS reason_text,
+    CAST(fail_total AS INT) + CAST(fail_rest AS INT) + CAST(fail_before AS INT) + CAST(fail_after AS INT) AS n_fail,
+    GREATEST(
+      30 - COALESCE(complaints_all, 0),
+      10 - COALESCE(restaurants, 0),
+      20 - COALESCE(complaints_before_apr2026, 0),
+      5 - COALESCE(complaints_after_apr2026, 0)
+    ) AS max_shortfall
+  FROM checks c
+),
+labeled AS (
+  SELECT
+    r.*,
+    CASE WHEN r.has_enough_data THEN NULL
+         ELSE concat('Not scored: ', COALESCE(NULLIF(r.reason_text, ''), 'insufficient data'), '.')
+    END AS not_scored_reason
+  FROM reasons r
+)
+SELECT
+  l.* EXCEPT (fail_total, fail_rest, fail_before, fail_after, reason_text, n_fail, max_shortfall),
+  (NOT l.has_enough_data AND l.n_fail = 1 AND l.max_shortfall <= 3) AS is_borderline,
+  t.typical_pct_auto_closed,
+  t.typical_median_days_to_close,
+  t.typical_rodent_violation_rate,
+  CASE WHEN l.has_enough_data
+    THEN concat('ZIP ', l.zip, ' (', l.borough, ') scores ', round(l.service_gap_index, 1),
+                ' out of 100 (higher means a bigger gap), ranked ', l.service_gap_rank, ' of ', l.zips_ranked, '.')
+    ELSE concat('ZIP ', l.zip, ' (', l.borough, ') is not scored. ', l.not_scored_reason, ' Figures below are context only.')
+  END AS summary_sentence,
+  CASE WHEN l.has_population
+    THEN concat(format_number(l.population, 0), ' residents (margin of error ', l.population_moe_pct, '%)')
+    ELSE 'No Census population estimate for this ZIP'
+  END AS population_text
+FROM labeled l
+CROSS JOIN typical t;
+
+-- COMMAND ----------
+
+CREATE OR REPLACE VIEW workspace.default.borough_metric_shares_v (
+  ord,
+  metric,
+  borough,
+  raw_value,
+  share_of_metric)
+WITH SCHEMA COMPENSATION
+AS WITH idx AS (
+  SELECT initcap(borough) AS borough,
+    CAST(sum(CASE WHEN has_population THEN complaints_all END)
+         / sum(CASE WHEN has_population THEN population END) * 10000 AS DOUBLE) AS complaints_per_10k,
+    CAST(100.0 * sum(auto_closed_before_apr2026) / sum(complaints_before_apr2026) AS DOUBLE) AS pct_closed_in_minute,
+    CAST(100.0 * sum(restaurants_with_rodent_violation) / sum(restaurants) AS DOUBLE) AS pct_cited,
+    CAST(sum(inspections) / sum(restaurants) AS DOUBLE) AS insp_per_restaurant
+  FROM workspace.default.zip_service_gap_index
+  WHERE borough IS NOT NULL
+  GROUP BY initcap(borough)
+),
+days AS (
+  SELECT initcap(borough) AS borough,
+    CAST(percentile_approx(
+      CASE WHEN closed_date >= created_date
+           THEN (unix_timestamp(closed_date) - unix_timestamp(created_date)) / 86400.0 END, 0.5) AS DOUBLE) AS median_days
+  FROM workspace.default.rat_sightings
+  WHERE created_date >= '2026-04-20' AND created_date < '2026-08-01' AND borough <> 'Unspecified'
+  GROUP BY initcap(borough)
+),
+wide AS (
+  SELECT i.borough, i.complaints_per_10k, i.pct_closed_in_minute, d.median_days, i.pct_cited, i.insp_per_restaurant
+  FROM idx i JOIN days d ON i.borough = d.borough
+),
+long AS (
+  SELECT borough, stack(5,
+    1, '311 complaints per 10k residents', complaints_per_10k,
+    2, 'Closed within a minute (filed before Apr 20)', pct_closed_in_minute,
+    3, 'Median days to close (filed after Apr 20)', median_days,
+    4, 'Restaurants cited for rats or mice', pct_cited,
+    5, 'Inspections per restaurant', insp_per_restaurant
+  ) AS (ord, metric, raw_value)
+  FROM wide
+)
+SELECT ord, metric, borough,
+       round(raw_value, 1) AS raw_value,
+       round(100 * raw_value / sum(raw_value) OVER (PARTITION BY metric), 1) AS share_of_metric
+FROM long;
+
+-- COMMAND ----------
+
+-- MAGIC %md
 -- MAGIC ## CELL 5: Sanity checks (expected values from local profiling of the CSVs)
 
 -- COMMAND ----------
@@ -375,7 +538,9 @@ UNION ALL SELECT 'zips in index', COUNT(*), 227 FROM workspace.default.zip_servi
 UNION ALL SELECT 'zips ranked', COUNT(*), 155 FROM workspace.default.zip_service_gap_index WHERE has_enough_data
 UNION ALL SELECT 'population rows', COUNT(*), 231 FROM workspace.default.nyc_population_clean
 UNION ALL SELECT 'population usable', COUNT(*), 183 FROM workspace.default.nyc_population_clean WHERE usable_for_per_capita
-UNION ALL SELECT 'ranked zips with population', COUNT(*), 155 FROM workspace.default.zip_service_gap_index WHERE has_enough_data AND has_population;
+UNION ALL SELECT 'ranked zips with population', COUNT(*), 155 FROM workspace.default.zip_service_gap_index WHERE has_enough_data AND has_population
+UNION ALL SELECT 'zip_lookup_v rows', COUNT(*), 227 FROM workspace.default.zip_lookup_v
+UNION ALL SELECT 'borough_metric_shares_v rows', COUNT(*), 25 FROM workspace.default.borough_metric_shares_v;
 
 -- COMMAND ----------
 
