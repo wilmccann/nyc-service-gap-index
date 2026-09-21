@@ -1,0 +1,796 @@
+{
+  "benchmarks": {
+    "questions": [
+      {
+        "answer": [
+          {
+            "content": [
+              "SELECT zip, borough, rodent_violation_rate_pct, rodent_sightings_per_10k_residents, service_gap_index\n",
+              "FROM workspace.default.zip_service_gap_index WHERE is_quiet_zip ORDER BY service_gap_index DESC;"
+            ],
+            "format": "SQL"
+          }
+        ],
+        "id": "01f1b4a5d2b91d7189599a083e4a97cf",
+        "question": [
+          "Which ZIPs are quiet: lots of rodent evidence but few calls?"
+        ]
+      },
+      {
+        "answer": [
+          {
+            "content": [
+              "SELECT zip, borough, population, rodent_sightings_per_10k_residents\n",
+              "FROM workspace.default.zip_service_gap_index WHERE has_population ORDER BY rodent_sightings_per_10k_residents DESC LIMIT 10;"
+            ],
+            "format": "SQL"
+          }
+        ],
+        "id": "01f1b4a5d2a91cb188ce65ff18fba4d3",
+        "question": [
+          "Which ZIPs call 311 about rats the most per resident?"
+        ]
+      },
+      {
+        "answer": [
+          {
+            "content": [
+              "SELECT zip, borough, rat_sightings, distinct_locations, top_location_share_pct\n",
+              "FROM workspace.default.zip_service_gap_index ORDER BY rat_sightings DESC LIMIT 10;"
+            ],
+            "format": "SQL"
+          }
+        ],
+        "id": "01f1b4a5d2991a29b3c58fd81469eb5a",
+        "question": [
+          "Which ZIP has the most rat sightings?"
+        ]
+      },
+      {
+        "answer": [
+          {
+            "content": [
+              "SELECT cuisine, COUNT(*) AS restaurants, SUM(CASE WHEN had_rat_violation THEN 1 ELSE 0 END) AS with_rat_violation,\n",
+              "       ROUND(100.0 * SUM(CASE WHEN had_rat_violation THEN 1 ELSE 0 END) / COUNT(*), 1) AS pct\n",
+              "FROM workspace.default.restaurants_clean GROUP BY 1 HAVING COUNT(*) >= 100 ORDER BY pct DESC LIMIT 10;"
+            ],
+            "format": "SQL"
+          }
+        ],
+        "id": "01f1b4a5d2881e8991d3636b7e0b25eb",
+        "question": [
+          "Which cuisine has the most rat violations?"
+        ]
+      },
+      {
+        "answer": [
+          {
+            "content": [
+              "SELECT borough, COUNT(*) AS restaurants, ROUND(100.0 * SUM(CASE WHEN had_rodent_violation THEN 1 ELSE 0 END) / COUNT(*), 1) AS pct_with_rodent_violation\n",
+              "FROM workspace.default.restaurants_clean WHERE borough IS NOT NULL GROUP BY 1 ORDER BY 3 DESC;"
+            ],
+            "format": "SQL"
+          }
+        ],
+        "id": "01f1b4a5d271172c88b332f64568e9de",
+        "question": [
+          "Which borough has the highest share of restaurants with rodent violations?"
+        ]
+      },
+      {
+        "answer": [
+          {
+            "content": [
+              "SELECT MEDIAN(days_to_close) AS median_days\n",
+              "FROM workspace.default.rodent_complaints_clean\n",
+              "WHERE borough = 'Brooklyn' AND created_at >= '2026-04-20' AND NOT is_auto_closed;"
+            ],
+            "format": "SQL"
+          }
+        ],
+        "id": "01f1b4a5d2611baab6f7d5dfc9580d60",
+        "question": [
+          "What is the median time to close a rodent complaint in Brooklyn since April 2026?"
+        ]
+      },
+      {
+        "answer": [
+          {
+            "content": [
+              "SELECT created_month, COUNT(*) AS complaints, ROUND(100.0 * SUM(CASE WHEN is_auto_closed THEN 1 ELSE 0 END) / COUNT(*), 1) AS pct_auto_closed\n",
+              "FROM workspace.default.rodent_complaints_clean GROUP BY 1 ORDER BY 1;"
+            ],
+            "format": "SQL"
+          }
+        ],
+        "id": "01f1b4a5d2491b6880e721174d3feb9a",
+        "question": [
+          "What share of rodent complaints were closed without a visit, by month?"
+        ]
+      },
+      {
+        "answer": [
+          {
+            "content": [
+              "SELECT zip, borough, service_gap_label, service_gap_index, service_gap_rank, zips_ranked, complaints_all, pct_auto_closed_before_apr2026, median_days_to_close_after_apr2026, restaurants, rodent_violation_rate_pct\n",
+              "FROM workspace.default.zip_service_gap_index WHERE zip = '11367';"
+            ],
+            "format": "SQL"
+          }
+        ],
+        "id": "01f1b4a5d2391ce9b2998240be6b93c9",
+        "question": [
+          "How is ZIP 11367 served?"
+        ]
+      },
+      {
+        "answer": [
+          {
+            "content": [
+              "SELECT zip, borough, service_gap_index, service_gap_rank, pct_auto_closed_before_apr2026, median_days_to_close_after_apr2026, rodent_violation_rate_pct\n",
+              "FROM workspace.default.zip_service_gap_index WHERE has_enough_data ORDER BY service_gap_rank LIMIT 10;"
+            ],
+            "format": "SQL"
+          }
+        ],
+        "id": "01f1b4a5d223174e9e00875284c2bfb5",
+        "question": [
+          "Which ZIP code has the biggest service gap?"
+        ]
+      },
+      {
+        "answer": [
+          {
+            "content": [
+              "SELECT COUNT(*) AS restaurants FROM workspace.default.restaurants_clean;"
+            ],
+            "format": "SQL"
+          }
+        ],
+        "id": "01f1b4a5d212162697c38b17440a935c",
+        "question": [
+          "How many restaurants are in the data?"
+        ]
+      },
+      {
+        "answer": [
+          {
+            "content": [
+              "SELECT 'complaints' AS check_name, COUNT(*) AS actual, 50954 AS expected FROM workspace.default.rodent_complaints_clean\n",
+              "UNION ALL SELECT 'complaints with valid zip', COUNT(*), 50953 FROM workspace.default.rodent_complaints_clean WHERE zip IS NOT NULL\n",
+              "UNION ALL SELECT 'auto-closed complaints', COUNT(*), 22547 FROM workspace.default.rodent_complaints_clean WHERE is_auto_closed\n",
+              "UNION ALL SELECT 'auto-closed after 2026-04-20', COUNT(*), 1 FROM workspace.default.rodent_complaints_clean WHERE is_auto_closed AND policy_era = 'after_2026-04-20'\n",
+              "UNION ALL SELECT 'violation rows', COUNT(*), 158083 FROM workspace.default.restaurant_violations_clean\n",
+              "UNION ALL SELECT 'restaurants', COUNT(*), 26114 FROM workspace.default.restaurants_clean\n",
+              "UNION ALL SELECT 'restaurants with rodent violation', COUNT(*), 5966 FROM workspace.default.restaurants_clean WHERE had_rodent_violation\n",
+              "UNION ALL SELECT 'zips in index', COUNT(*), 227 FROM workspace.default.zip_service_gap_index\n",
+              "UNION ALL SELECT 'zips ranked', COUNT(*), 155 FROM workspace.default.zip_service_gap_index WHERE has_enough_data\n",
+              "UNION ALL SELECT 'population rows', COUNT(*), 231 FROM workspace.default.nyc_population_clean\n",
+              "UNION ALL SELECT 'population usable', COUNT(*), 183 FROM workspace.default.nyc_population_clean WHERE usable_for_per_capita\n",
+              "UNION ALL SELECT 'ranked zips with population', COUNT(*), 155 FROM workspace.default.zip_service_gap_index WHERE has_enough_data AND has_population;"
+            ],
+            "format": "SQL"
+          }
+        ],
+        "id": "01f1b4a5d1fc128d81f0f6dbe723556f",
+        "question": [
+          "What are the counts of various rodent complaints, restaurant violations, restaurants, and ZIP code data for validation and comparison?"
+        ]
+      }
+    ]
+  },
+  "data_sources": {
+    "tables": [
+      {
+        "column_configs": [
+          {
+            "column_name": "borough",
+            "enable_entity_matching": true,
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "is_nyc",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "margin_of_error",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "margin_of_error_pct",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "population",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "population_quality",
+            "enable_entity_matching": true,
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "usable_for_per_capita",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "zip",
+            "enable_entity_matching": true,
+            "enable_format_assistance": true
+          }
+        ],
+        "identifier": "workspace.default.nyc_population_clean"
+      },
+      {
+        "column_configs": [
+          {
+            "column_name": "borough",
+            "enable_entity_matching": true,
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "closed_date",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "created_date",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "descriptor",
+            "enable_entity_matching": true,
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "incident_zip",
+            "enable_entity_matching": true,
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "status",
+            "enable_entity_matching": true,
+            "enable_format_assistance": true
+          }
+        ],
+        "identifier": "workspace.default.rats_clean"
+      },
+      {
+        "column_configs": [
+          {
+            "column_name": "borough",
+            "enable_entity_matching": true,
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "camis",
+            "enable_entity_matching": true,
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "critical_flag",
+            "enable_entity_matching": true,
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "cuisine",
+            "enable_entity_matching": true,
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "grade",
+            "enable_entity_matching": true,
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "inspection_date",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "inspection_score",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "is_harborage_violation",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "is_mouse_violation",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "is_no_violation_row",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "is_rat_violation",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "is_rodent_violation",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "restaurant_name",
+            "enable_entity_matching": true,
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "violation_code",
+            "enable_entity_matching": true,
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "violation_description",
+            "enable_entity_matching": true,
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "zip",
+            "enable_entity_matching": true,
+            "enable_format_assistance": true
+          }
+        ],
+        "identifier": "workspace.default.restaurant_violations_clean"
+      },
+      {
+        "column_configs": [
+          {
+            "column_name": "borough",
+            "enable_entity_matching": true,
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "camis",
+            "enable_entity_matching": true,
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "cuisine",
+            "enable_entity_matching": true,
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "first_inspection",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "had_harborage_violation",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "had_mouse_violation",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "had_rat_violation",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "had_rodent_violation",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "inspections",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "last_inspection",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "restaurant_name",
+            "enable_entity_matching": true,
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "violations",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "zip",
+            "enable_entity_matching": true,
+            "enable_format_assistance": true
+          }
+        ],
+        "identifier": "workspace.default.restaurants_clean"
+      },
+      {
+        "column_configs": [
+          {
+            "column_name": "borough",
+            "enable_entity_matching": true,
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "closed_at",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "complaint_id",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "created_at",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "created_month",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "days_to_close",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "descriptor",
+            "enable_entity_matching": true,
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "is_auto_closed",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "is_rat_sighting",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "is_rodent_sighting",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "latitude",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "location_type",
+            "enable_entity_matching": true,
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "longitude",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "minutes_to_close",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "outcome",
+            "enable_entity_matching": true,
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "policy_era",
+            "enable_entity_matching": true,
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "status",
+            "enable_entity_matching": true,
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "zip",
+            "enable_entity_matching": true,
+            "enable_format_assistance": true
+          }
+        ],
+        "identifier": "workspace.default.rodent_complaints_clean"
+      },
+      {
+        "column_configs": [
+          {
+            "column_name": "auto_closed_before_apr2026",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "borough",
+            "enable_entity_matching": true,
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "complaints_after_apr2026",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "complaints_all",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "complaints_before_apr2026",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "complaints_open",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "complaints_per_100_restaurants",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "complaints_per_10k_residents",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "condition_complaints",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "distinct_locations",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "has_enough_data",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "has_population",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "inspections",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "is_quiet_zip",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "median_days_to_close_after_apr2026",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "no_show_score",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "pct_auto_closed_before_apr2026",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "population",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "population_moe_pct",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "rat_sightings",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "restaurants",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "restaurants_per_10k_residents",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "restaurants_with_rat_violation",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "restaurants_with_rodent_violation",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "rodent_need_score",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "rodent_sightings",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "rodent_sightings_per_10k_residents",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "rodent_violation_rate_pct",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "service_gap_index",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "service_gap_label",
+            "enable_entity_matching": true,
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "service_gap_rank",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "slow_response_score",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "top_location_share_pct",
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "zip",
+            "enable_entity_matching": true,
+            "enable_format_assistance": true
+          },
+          {
+            "column_name": "zips_ranked",
+            "enable_format_assistance": true
+          }
+        ],
+        "identifier": "workspace.default.zip_service_gap_index"
+      }
+    ]
+  },
+  "instructions": {
+    "example_question_sqls": [
+      {
+        "id": "01f1b45a1e2414719e941d204bad32b8",
+        "question": [
+          "What are the counts of various rodent complaints, restaurant violations, restaurants, and ZIP code data for validation and comparison?"
+        ],
+        "sql": [
+          "SELECT 'complaints' AS check_name, COUNT(*) AS actual, 50954 AS expected FROM workspace.default.rodent_complaints_clean\n",
+          "UNION ALL SELECT 'complaints with valid zip', COUNT(*), 50953 FROM workspace.default.rodent_complaints_clean WHERE zip IS NOT NULL\n",
+          "UNION ALL SELECT 'auto-closed complaints', COUNT(*), 22547 FROM workspace.default.rodent_complaints_clean WHERE is_auto_closed\n",
+          "UNION ALL SELECT 'auto-closed after 2026-04-20', COUNT(*), 1 FROM workspace.default.rodent_complaints_clean WHERE is_auto_closed AND policy_era = 'after_2026-04-20'\n",
+          "UNION ALL SELECT 'violation rows', COUNT(*), 158083 FROM workspace.default.restaurant_violations_clean\n",
+          "UNION ALL SELECT 'restaurants', COUNT(*), 26114 FROM workspace.default.restaurants_clean\n",
+          "UNION ALL SELECT 'restaurants with rodent violation', COUNT(*), 5966 FROM workspace.default.restaurants_clean WHERE had_rodent_violation\n",
+          "UNION ALL SELECT 'zips in index', COUNT(*), 227 FROM workspace.default.zip_service_gap_index\n",
+          "UNION ALL SELECT 'zips ranked', COUNT(*), 155 FROM workspace.default.zip_service_gap_index WHERE has_enough_data\n",
+          "UNION ALL SELECT 'population rows', COUNT(*), 231 FROM workspace.default.nyc_population_clean\n",
+          "UNION ALL SELECT 'population usable', COUNT(*), 183 FROM workspace.default.nyc_population_clean WHERE usable_for_per_capita\n",
+          "UNION ALL SELECT 'ranked zips with population', COUNT(*), 155 FROM workspace.default.zip_service_gap_index WHERE has_enough_data AND has_population"
+        ]
+      },
+      {
+        "id": "01f1b45a5d4e1d6ba37941c3b49a5ed3",
+        "question": [
+          "How many restaurants are in the data?"
+        ],
+        "sql": [
+          "SELECT COUNT(*) AS restaurants FROM workspace.default.restaurants_clean;"
+        ]
+      },
+      {
+        "id": "01f1b45a8c0816e3b78ea499fa9747cd",
+        "question": [
+          "Which ZIP code has the biggest service gap?"
+        ],
+        "sql": [
+          "SELECT zip, borough, service_gap_index, service_gap_rank, pct_auto_closed_before_apr2026, median_days_to_close_after_apr2026, rodent_violation_rate_pct\n",
+          "FROM workspace.default.zip_service_gap_index WHERE has_enough_data ORDER BY service_gap_rank LIMIT 10;"
+        ]
+      },
+      {
+        "id": "01f1b45a95ef17688fe3d5485748d5e2",
+        "question": [
+          "How is ZIP 11367 served?"
+        ],
+        "sql": [
+          "SELECT zip, borough, service_gap_label, service_gap_index, service_gap_rank, zips_ranked, complaints_all, pct_auto_closed_before_apr2026, median_days_to_close_after_apr2026, restaurants, rodent_violation_rate_pct\n",
+          "FROM workspace.default.zip_service_gap_index WHERE zip = '11367';"
+        ]
+      },
+      {
+        "id": "01f1b45aa66015a495c61af8f8d5d664",
+        "question": [
+          "What share of rodent complaints were closed without a visit, by month?"
+        ],
+        "sql": [
+          "SELECT created_month, COUNT(*) AS complaints, ROUND(100.0 * SUM(CASE WHEN is_auto_closed THEN 1 ELSE 0 END) / COUNT(*), 1) AS pct_auto_closed\n",
+          "FROM workspace.default.rodent_complaints_clean GROUP BY 1 ORDER BY 1;"
+        ]
+      },
+      {
+        "id": "01f1b45ab3df1162b86feb6db99d6f0a",
+        "question": [
+          "What is the median time to close a rodent complaint in Brooklyn since April 2026?"
+        ],
+        "sql": [
+          "SELECT MEDIAN(days_to_close) AS median_days\n",
+          "FROM workspace.default.rodent_complaints_clean\n",
+          "WHERE borough = 'Brooklyn' AND created_at >= '2026-04-20' AND NOT is_auto_closed;"
+        ]
+      },
+      {
+        "id": "01f1b45abbdc1a7882b4d01ea662ece8",
+        "question": [
+          "Which borough has the highest share of restaurants with rodent violations?"
+        ],
+        "sql": [
+          "SELECT borough, COUNT(*) AS restaurants, ROUND(100.0 * SUM(CASE WHEN had_rodent_violation THEN 1 ELSE 0 END) / COUNT(*), 1) AS pct_with_rodent_violation\n",
+          "FROM workspace.default.restaurants_clean WHERE borough IS NOT NULL GROUP BY 1 ORDER BY 3 DESC;"
+        ]
+      },
+      {
+        "id": "01f1b45ac3e618b1bd02db638efa876a",
+        "question": [
+          "Which cuisine has the most rat violations?"
+        ],
+        "sql": [
+          "SELECT cuisine, COUNT(*) AS restaurants, SUM(CASE WHEN had_rat_violation THEN 1 ELSE 0 END) AS with_rat_violation,\n",
+          "       ROUND(100.0 * SUM(CASE WHEN had_rat_violation THEN 1 ELSE 0 END) / COUNT(*), 1) AS pct\n",
+          "FROM workspace.default.restaurants_clean GROUP BY 1 HAVING COUNT(*) >= 100 ORDER BY pct DESC LIMIT 10;"
+        ]
+      },
+      {
+        "id": "01f1b45aceaa167bbe3af48918d34d3a",
+        "question": [
+          "Which ZIP has the most rat sightings? (answer with the caveat)"
+        ],
+        "sql": [
+          "SELECT zip, borough, rat_sightings, distinct_locations, top_location_share_pct\n",
+          "FROM workspace.default.zip_service_gap_index ORDER BY rat_sightings DESC LIMIT 10;"
+        ]
+      },
+      {
+        "id": "01f1b45ad7f11221bfebe37d26eb667e",
+        "question": [
+          "Which ZIPs call 311 about rats the most per resident?"
+        ],
+        "sql": [
+          "SELECT zip, borough, population, rodent_sightings_per_10k_residents\n",
+          "FROM workspace.default.zip_service_gap_index WHERE has_population ORDER BY rodent_sightings_per_10k_residents DESC LIMIT 10;"
+        ]
+      },
+      {
+        "id": "01f1b45ae0401b7cbdde7fc7e49e7861",
+        "question": [
+          "Which ZIPs are quiet: lots of rodent evidence but few calls?"
+        ],
+        "sql": [
+          "SELECT zip, borough, rodent_violation_rate_pct, rodent_sightings_per_10k_residents, service_gap_index\n",
+          "FROM workspace.default.zip_service_gap_index WHERE is_quiet_zip ORDER BY service_gap_index DESC;"
+        ]
+      }
+    ],
+    "sql_snippets": {
+      "expressions": [
+        {
+          "alias": "ranked_biggest_gap_zip_order",
+          "display_name": "biggest service gap ZIP codes",
+          "id": "01f1b4a728bb1cd4a22214f268cc870d",
+          "instruction": [
+            "WHEN_TO_USE: When answering for the biggest service gaps, use ORDER BY service_gap_rank LIMIT 10 on zip_service_gap_index after filtering for has_enough_data. SCOPE_TABLES: zip_service_gap_index. RISK_IF_MISUSED: If used without limit or order, results may not reflect the largest gaps; do NOT use universally—only when ranking or top ZIPs is requested."
+          ],
+          "sql": [
+            "zip_service_gap_index.service_gap_rank"
+          ]
+        }
+      ]
+    },
+    "text_instructions": [
+      {
+        "content": [
+          "This space answers questions about NYC rodent complaints (311) and restaurant rodent violations, Jan 2025 to Sep 2026.\n",
+          "\n",
+          "Definitions:\n",
+          "- A \"rodent complaint\" or \"rodent sighting\" means rodent_complaints_clean rows where is_rodent_sighting = TRUE (Rat Sighting, Mouse Sighting, Signs of Rodents). \"Condition Attracting Rodents\" is not a sighting.\n",
+          "- \"Rat sighting\" means descriptor = 'Rat Sighting'.\n",
+          "- A complaint was \"auto-closed\" or \"closed without a visit\" or \"the city did not show up\" when is_auto_closed = TRUE (closed within 60 seconds of filing). Auto-closing stopped on 2026-04-20.\n",
+          "- \"Response time\" or \"time to close\" means MEDIAN(days_to_close) over rows where is_auto_closed = FALSE. Never use AVG. Never include auto-closed rows.\n",
+          "- A \"rodent violation\" at a restaurant means violation_code in ('04K','04L'). 04K = rats, 04L = mice, 08A = harborage conditions (not a rodent violation).\n",
+          "- To count restaurants ALWAYS use COUNT(DISTINCT camis) or the restaurants_clean table. restaurant_violations_clean has one row per violation, so COUNT(*) on it counts violations, not restaurants or inspections.\n",
+          "- To count inspections use COUNT(DISTINCT camis, inspection_date).\n",
+          "- ZIP codes are 5-digit strings. Compare zip = '11423', not zip = 11423.\n",
+          "- For \"worst served\", \"biggest service gap\", or \"how is my ZIP served\" use zip_service_gap_index.service_gap_index (higher = worse) and service_gap_rank (1 = worst), only where has_enough_data = TRUE.\n",
+          "- If a ZIP has has_enough_data = FALSE, say it does not have enough data to rank and report its raw counts.\n",
+          "- Do not rank ZIPs by raw complaint counts; complaints measure who calls 311, not where rats are. If asked for the \"most rats\", explain this and offer rodent_violation_rate_pct instead.\n",
+          "- Borough values: Manhattan, Brooklyn, Queens, Bronx, Staten Island.\n",
+          "- \"Per capita\" or \"per resident\" means per 10,000 residents: use complaints_per_10k_residents or rodent_sightings_per_10k_residents in zip_service_gap_index, or join nyc_population_clean on zip and divide by population only where usable_for_per_capita = TRUE. Never divide by a population under 1,000.\n",
+          "- A \"quiet ZIP\" (is_quiet_zip = TRUE) is one where inspectors find rodents at an above-median share of restaurants but residents call 311 below the median per-capita rate. These are likely under-reporting."
+        ],
+        "id": "01f1b45a350318e1aa4931b2db95244c"
+      }
+    ]
+  },
+  "version": 2
+}

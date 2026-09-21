@@ -2,7 +2,7 @@
 -- MAGIC %md
 -- MAGIC # Build Notebook (DDL/DML statements)
 -- MAGIC Builds the clean tables and the ZIP Service Gap Index from the raw uploads, in dependency order:
--- MAGIC `raw` → (1 complaints, 2 violations, 3b population) → 3 restaurants → 4 index → 4b dashboard views → 5 sanity checks.
+-- MAGIC `raw` → (1 complaints, 2 violations, 3b population) → 3 restaurants → 4 index → 4b dashboard views → 4c Genie view → 5 sanity checks.
 -- MAGIC
 -- MAGIC Every CREATE cell also re-applies its table and column COMMENTs so a rebuild never strips the descriptions Genie reads.
 -- MAGIC Run All from the top; Cell 5 shows `actual` vs `expected` for every table.
@@ -523,6 +523,38 @@ FROM long;
 -- COMMAND ----------
 
 -- MAGIC %md
+-- MAGIC ## CELL 4c: Genie view
+-- MAGIC The Genie space also lists `rats_clean`, a thin typed view over the raw `rat_sightings` table. Definition copied from the source workspace.
+
+-- COMMAND ----------
+
+CREATE OR REPLACE VIEW workspace.default.rats_clean (
+  created_date,
+  closed_date,
+  status,
+  descriptor,
+  borough,
+  incident_zip)
+WITH SCHEMA COMPENSATION
+AS SELECT 
+  CAST(`created_date` AS TIMESTAMP) AS `created_date`,
+  CAST(`closed_date` AS TIMESTAMP) AS `closed_date`,
+  `status`,
+  `descriptor`,
+  `borough`,
+  LPAD(CAST(`incident_zip` AS STRING), 5, '0') AS `incident_zip`
+FROM `workspace`.`default`.`rat_sightings`
+WHERE 
+  `incident_zip` IS NOT NULL
+  AND (
+    CAST(`incident_zip` AS STRING) RLIKE '^[0-9]{5}$'
+    OR (CAST(`incident_zip` AS STRING) RLIKE '^[0-9]{1,4}$' 
+        AND CAST(`incident_zip` AS INT) BETWEEN 1 AND 99999)
+  );
+
+-- COMMAND ----------
+
+-- MAGIC %md
 -- MAGIC ## CELL 5: Sanity checks (expected values from local profiling of the CSVs)
 
 -- COMMAND ----------
@@ -540,7 +572,8 @@ UNION ALL SELECT 'population rows', COUNT(*), 231 FROM workspace.default.nyc_pop
 UNION ALL SELECT 'population usable', COUNT(*), 183 FROM workspace.default.nyc_population_clean WHERE usable_for_per_capita
 UNION ALL SELECT 'ranked zips with population', COUNT(*), 155 FROM workspace.default.zip_service_gap_index WHERE has_enough_data AND has_population
 UNION ALL SELECT 'zip_lookup_v rows', COUNT(*), 227 FROM workspace.default.zip_lookup_v
-UNION ALL SELECT 'borough_metric_shares_v rows', COUNT(*), 25 FROM workspace.default.borough_metric_shares_v;
+UNION ALL SELECT 'borough_metric_shares_v rows', COUNT(*), 25 FROM workspace.default.borough_metric_shares_v
+UNION ALL SELECT 'rats_clean rows', COUNT(*), 50953 FROM workspace.default.rats_clean;
 
 -- COMMAND ----------
 

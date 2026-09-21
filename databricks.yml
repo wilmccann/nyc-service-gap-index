@@ -82,6 +82,7 @@ sync:
   # Reference material and repo housekeeping are not needed in the workspace.
   exclude:
     - "resources/data/**"
+    - "genie/**"
     - "hackathon-materials/**"
     - "docs/**"
     - ".gitignore"

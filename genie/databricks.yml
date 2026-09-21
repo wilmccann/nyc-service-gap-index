@@ -1,0 +1,56 @@
+# NYC Service Gap Index — Genie space (a separate, tiny bundle)
+# ---------------------------------------------------------------------------
+# Why is this not in the main databricks.yml?
+# Databricks checks that every table a Genie space uses exists at the moment
+# the space is created. On a fresh workspace the tables only exist after the
+# build_tables job has run, so the space has to be deployed as a second step:
+#
+#   cd genie
+#   databricks bundle deploy --target dev --var="warehouse_id=<id>"
+#
+# nyc_rodent_insights.geniespace.json was exported from the source workspace
+# with `databricks bundle generate genie-space`. It holds the data sources,
+# the instructions Genie follows, 11 example questions with SQL, and 11
+# benchmark questions.
+# ---------------------------------------------------------------------------
+
+bundle:
+  name: nyc_service_gap_index_genie
+
+variables:
+  warehouse_id:
+    description: >-
+      ID of the SQL warehouse Genie should run queries on. Same value you
+      used for the main bundle. Find it with `databricks warehouses list`.
+
+targets:
+  dev:
+    mode: development
+    default: true
+
+  prod:
+    mode: production
+
+resources:
+  genie_spaces:
+    nyc_rodent_insights:
+      title: "Genie Agent: NYC Rodent and Restaurant Health Insights"
+      description: |-
+        This Agent provides data-driven insights into NYC rodent complaints, restaurant rodent violations, and city service response by ZIP code and borough from January 2025 to September 2026.
+
+        **Capabilities:**
+        - Analyze counts and trends of 311 rodent complaints, including status, response times, and changes before and after policy updates.
+        - View restaurant health inspection outcomes, focusing on evidence of rats, mice, and conditions attracting pests, and compare violation rates by ZIP code, cuisine, or borough.
+        - Assess per-capita and per-restaurant rodent complaint rates, identify "quiet" ZIP codes with high rodent evidence but low complaint rates, and compare boroughs.
+        - Examine the city's Service Gap Index to identify where resident rodent concerns are not matched by city response.
+
+        **Limitations:**
+        - Cannot measure the actual rodent population; complaint data reflects who calls 311, not true infestation levels.
+        - Does not rank neighborhoods by raw complaint counts or claim to identify "the most rats"; violation rates are used as more reliable evidence.
+        - Per-capita metrics are only available for ZIPs with population above 1,000.
+        - ZIPs with insufficient data are not ranked in the Service Gap Index and only basic counts can be reported.
+      warehouse_id: ${var.warehouse_id}
+      file_path: ./nyc_rodent_insights.geniespace.json
+
+sync:
+  paths: []

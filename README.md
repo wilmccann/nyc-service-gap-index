@@ -1,6 +1,6 @@
 # NYC Service Gap Index — Databricks Asset Bundle
 
-One team's solution to the **"Is My Block Cursed?"** challenge from the AI Hackathon + Networking NYC, packaged so that anyone with a free Databricks account can recreate it. You copy this repo to your computer, run a few terminal commands, and the tables, notebooks, and dashboard are live in your own workspace. No manual data upload and no clicking around notebooks is needed.
+One team's solution to the **"Is My Block Cursed?"** challenge from the AI Hackathon + Networking NYC, packaged so that anyone with a free Databricks account can recreate it. You copy this repo to your computer, run a few terminal commands, and the tables, notebooks, dashboard, and Genie space are live in your own workspace. No manual data upload and no clicking around notebooks is needed.
 
 **Time to set up:** about 20–30 minutes the first time. It runs on [Databricks Free Edition](https://www.databricks.com/learn/free-edition), so no paid account is needed.
 
@@ -219,7 +219,19 @@ The **Sanity checks** cell at the bottom of `build_notebook` shows `actual` vs `
 
 </details>
 
-### Step 7 — Open the dashboard
+### Step 7 — Add the Genie space
+
+The Genie space lets you ask questions about the data in plain English. It lives in its own small bundle in the `genie/` folder, because Databricks checks that every table it uses exists at the moment the space is created, and those tables only exist after Step 6. Deploy it now:
+
+```bash
+cd genie
+databricks bundle deploy --target dev --var="warehouse_id=$WAREHOUSE_ID"
+cd ..
+```
+
+You'll see `Created genie_spaces.nyc_rodent_insights`. Then click **Genie Agents** in the left sidebar and open **[dev <your name>] Genie Agent: NYC Rodent and Restaurant Health Insights**. Under **Configure → Examples** you'll find the 11 example questions with their SQL. Try asking one, such as "How is ZIP 11367 served?"
+
+### Step 8 — Open the dashboard
 
 Click **Dashboards** in the left sidebar and open **[dev <your name>] NYC Service Gap Dashboard**. Or, from the terminal:
 
@@ -252,6 +264,7 @@ If the widgets are blank, click **Refresh** at the top of the dashboard. The SQL
 | **Job fails immediately mentioning serverless or compute** | Your workspace doesn't have serverless jobs enabled. Ask an admin to enable it, or run the notebooks by hand on a cluster (see the expandable section in Step 6). |
 | **"Catalog workspace does not exist"** or permission error creating it | You need `CREATE CATALOG` permission, or an admin can create the `workspace` catalog and `default` schema for you. See [Using a different catalog or schema](#using-a-different-catalog-or-schema). |
 | **Dashboard shows no data** | The build job must finish first. The dashboard reads `workspace.default.zip_service_gap_index`, which doesn't exist until Step 6 succeeds. |
+| **Genie deploy fails with `Table 'workspace.default.…' does not exist`** | The build job hasn't run yet, or failed. Finish Step 6 first, then rerun the Genie deploy in Step 7. |
 | **Notebook won't run / "no compute attached"** (manual route only) | Use the **Connect** dropdown at the top right of the notebook to pick Serverless or a running cluster. |
 
 ---
@@ -260,6 +273,8 @@ If the widgets are blank, click **Refresh** at the top of the dashboard. The SQL
 
 | File | Description |
 | --- | --- |
+| `genie/databricks.yml` | A second, tiny bundle holding only the Genie space (see Step 7 for why it's separate) |
+| `genie/nyc_rodent_insights.geniespace.json` | The Genie space export: data sources, instructions, 11 example questions with SQL, 11 benchmark questions |
 | `docs/hackathon-brief.md` | The "Is My Block Cursed?" participant guide, converted to Markdown |
 | `hackathon-materials/` | The original handout (Word) and the two raw CSVs exactly as provided at the event. Not used by the bundle; kept for reference. |
 | `databricks.yml` | Bundle definition: the `warehouse_id` variable, `dev`/`prod` targets, the `raw_data` volume, the `build_tables` job, the dashboard, and which files to sync |
@@ -267,7 +282,7 @@ If the widgets are blank, click **Refresh** at the top of the dashboard. The SQL
 | `resources/data/restaurant_inspections.csv` | NYC DOHMH restaurant inspection records (158,083 rows). Same rows as the hackathon file, with a few unused columns dropped. |
 | `resources/data/nyc_population_by_zip.csv` | ACS population estimates by ZIP code (231 rows). Not provided at the event; the team downloaded it to turn raw counts into per-capita rates. |
 | `resources/notebooks/ingest_raw_data.py` | Reads the 3 CSVs from the `raw_data` volume and creates the raw tables |
-| `resources/notebooks/build_notebook.sql` | SQL that transforms raw tables into clean tables, the final `zip_service_gap_index`, and the two views the dashboard uses |
+| `resources/notebooks/build_notebook.sql` | SQL that transforms raw tables into clean tables, the final `zip_service_gap_index`, and the views the dashboard and Genie space use |
 | `resources/notebooks/key_decisions_notebook.sql` | Documentation notebook: 11 analytical decisions with validation queries |
 | `resources/dashboards/zip_service_gap_index_dashboard.json` | The NYC Service Gap Dashboard: two pages, 22 datasets, exported from the source workspace |
 
@@ -283,10 +298,11 @@ resources/data/*.csv
   3 raw tables in workspace.default
         │
         ▼  build_tables job, step 2: build_notebook
-  5 clean tables + zip_service_gap_index + 2 views
+  5 clean tables + zip_service_gap_index + 3 views
         │
-        ▼
-  Dashboard reads zip_service_gap_index, rat_sightings, and the views
+        ├──▶  Dashboard reads zip_service_gap_index, rat_sightings, and two views
+        │
+        └──▶  Genie space reads the clean tables, the index, and rats_clean
 ```
 
 | Raw table (from CSV) | Clean table (build notebook creates) |
@@ -296,6 +312,7 @@ resources/data/*.csv
 | `nyc_population_by_zip` | `nyc_population_clean` |
 | | **`zip_service_gap_index`** (final output the dashboard reads) |
 | | `zip_lookup_v`, `borough_metric_shares_v` (views on top of the index for the dashboard) |
+| | `rats_clean` (typed view over raw complaints, used by the Genie space) |
 
 ---
 
@@ -320,10 +337,13 @@ The notebooks and dashboard hardcode `workspace.default`. If you can't use that 
 
 ## Redeploying after changes
 
-If you edit any file in this repo, push the changes with the same deploy command from Step 5, then rerun the job from Step 6. You only need to repeat the `databricks fs cp` upload if the CSVs changed. To remove everything the bundle created from your workspace (the tables stay):
+If you edit any file in this repo, push the changes with the same deploy command from Step 5, then rerun the job from Step 6. You only need to repeat the `databricks fs cp` upload if the CSVs changed. If you edited the Genie space, rerun the deploy in Step 7.
+
+To remove everything the bundles created from your workspace (the tables and the volume's files stay), run both destroys:
 
 ```bash
 databricks bundle destroy --target dev --var="warehouse_id=$WAREHOUSE_ID"
+cd genie && databricks bundle destroy --target dev --var="warehouse_id=$WAREHOUSE_ID" && cd ..
 ```
 
 ---
