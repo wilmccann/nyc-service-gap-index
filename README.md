@@ -193,7 +193,7 @@ It prints a link to the run and then status lines. Expect about 4 minutes:
 
 The job has two steps:
 
-1. **ingest** reads the three CSVs that shipped with the bundle and creates the raw tables. It also creates the `workspace` catalog and `default` schema if they don't exist.
+1. **ingest** copies the three CSVs that shipped with the bundle into a Unity Catalog volume (`workspace.default.raw_data`) and creates the raw tables from there. It also creates the `workspace` catalog and `default` schema if they don't exist.
 2. **build** transforms those into five clean tables, the final `zip_service_gap_index` table, and two views the dashboard reads.
 
 If the last line says `TERMINATED SUCCESS`, you're done with data. If it says `FAILED`, open the run link it printed; the failing step's error is shown there. See [Troubleshooting](#troubleshooting).
@@ -239,6 +239,7 @@ If the widgets are blank, click **Refresh** at the top of the dashboard. The SQL
 | **Deploy fails mentioning `warehouse_id`** | Pass `--var="warehouse_id=<id>"` on the deploy command. The default value in `databricks.yml` is the original author's warehouse and won't exist in your workspace. |
 | **Can't find the `.bundle` folder or the notebooks** | The workspace search box doesn't index `.bundle`. Browse to it: **Workspace → Home → .bundle → nyc_service_gap_index → dev → files → resources → notebooks**. Or run `databricks bundle summary --target dev --var="warehouse_id=$WAREHOUSE_ID"` and use the path it prints. In the Workspace browser you can paste that path into the search box. |
 | **Job fails in the `ingest` step with "CSV directory not found"** | Run `databricks bundle summary --target dev --var="warehouse_id=$WAREHOUSE_ID"` and confirm the files were uploaded. If you're running the notebook by hand, set its `data_dir` widget to `/Workspace/Users/<your-email>/.bundle/nyc_service_gap_index/dev/files/resources/data`. |
+| **Job fails in `ingest` with `FAILED_READ_FILE` or `Error while reading file`** | Spark could not read a CSV. Make sure you're on the latest version of this repo (`git pull`, then redeploy). Older versions read CSVs straight from the workspace folder, which fails on some workspaces; the current version stages them in a Unity Catalog volume first. |
 | **Job fails immediately mentioning serverless or compute** | Your workspace doesn't have serverless jobs enabled. Ask an admin to enable it, or run the notebooks by hand on a cluster (see the expandable section in Step 6). |
 | **"Catalog workspace does not exist"** or permission error creating it | You need `CREATE CATALOG` permission, or an admin can create the `workspace` catalog and `default` schema for you. See [Using a different catalog or schema](#using-a-different-catalog-or-schema). |
 | **Dashboard shows no data** | The build job must finish first. The dashboard reads `workspace.default.zip_service_gap_index`, which doesn't exist until Step 6 succeeds. |
@@ -256,7 +257,7 @@ If the widgets are blank, click **Refresh** at the top of the dashboard. The SQL
 | `resources/data/rat_sightings.csv` | NYC 311 rodent complaint records (50,954 rows). Same rows as the hackathon file, with a few unused columns dropped. |
 | `resources/data/restaurant_inspections.csv` | NYC DOHMH restaurant inspection records (158,083 rows). Same rows as the hackathon file, with a few unused columns dropped. |
 | `resources/data/nyc_population_by_zip.csv` | ACS population estimates by ZIP code (231 rows). Not provided at the event; the team downloaded it to turn raw counts into per-capita rates. |
-| `resources/notebooks/ingest_raw_data.py` | Reads the 3 CSVs and creates the raw tables |
+| `resources/notebooks/ingest_raw_data.py` | Copies the 3 CSVs into a Unity Catalog volume and creates the raw tables |
 | `resources/notebooks/build_notebook.sql` | SQL that transforms raw tables into clean tables, the final `zip_service_gap_index`, and the two views the dashboard uses |
 | `resources/notebooks/key_decisions_notebook.sql` | Documentation notebook: 11 analytical decisions with validation queries |
 | `resources/dashboards/zip_service_gap_index_dashboard.json` | The NYC Service Gap Dashboard: two pages, 22 datasets, exported from the source workspace |

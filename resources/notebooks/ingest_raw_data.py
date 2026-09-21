@@ -3,7 +3,7 @@
 # MAGIC %md
 # MAGIC # Ingest Raw Data
 # MAGIC
-# MAGIC Reads the 3 source CSVs from the bundle's `resources/data/` directory and creates the raw tables that `build_notebook.sql` expects.
+# MAGIC Copies the 3 source CSVs from the bundle's `resources/data/` directory into the Unity Catalog volume `workspace.default.raw_data`, then creates the raw tables that `build_notebook.sql` expects.
 # MAGIC
 # MAGIC | CSV file | Table created |
 # MAGIC | --- | --- |
@@ -48,13 +48,34 @@ print("Catalog 'workspace' and schema 'default' are ready.")
 
 # COMMAND ----------
 
+# DBTITLE 1,Stage CSVs in a Unity Catalog volume
+# Spark should not read large files straight out of the workspace file
+# system (the /Workspace mount is for notebooks and small files, and reads
+# of multi-megabyte CSVs through it fail on some workspaces). Copy the CSVs
+# into a Unity Catalog volume, which is the supported location for data
+# files, and read from there.
+import shutil
+
+CSV_FILES = ["rat_sightings.csv", "restaurant_inspections.csv", "nyc_population_by_zip.csv"]
+
+spark.sql("CREATE VOLUME IF NOT EXISTS workspace.default.raw_data")
+volume_dir = "/Volumes/workspace/default/raw_data"
+
+for name in CSV_FILES:
+    src = os.path.join(data_dir, name)
+    dst = os.path.join(volume_dir, name)
+    shutil.copyfile(src, dst)
+    print(f"Copied {name} ({os.path.getsize(dst) / 1e6:.1f} MB) to {volume_dir}")
+
+# COMMAND ----------
+
 # DBTITLE 1,Ingest rat_sightings
 # Ingest rat_sightings.csv → workspace.default.rat_sightings
 # Expected columns: unique_key, created_date, closed_date, status, descriptor,
 #   location_type, incident_zip, borough, latitude, longitude
 
 df = spark.read.csv(
-    f"{data_dir}/rat_sightings.csv",
+    f"{volume_dir}/rat_sightings.csv",
     header=True,
     inferSchema=True,
 )
@@ -69,7 +90,7 @@ print(f"rat_sightings: {df.count():,} rows ingested")
 #   inspection_date, score, violation_code, grade
 
 df = spark.read.csv(
-    f"{data_dir}/restaurant_inspections.csv",
+    f"{volume_dir}/restaurant_inspections.csv",
     header=True,
     inferSchema=True,
 )
@@ -83,7 +104,7 @@ print(f"restaurant_inspections: {df.count():,} rows ingested")
 # Expected columns: zip_code, borough, population, margin_of_error
 
 df = spark.read.csv(
-    f"{data_dir}/nyc_population_by_zip.csv",
+    f"{volume_dir}/nyc_population_by_zip.csv",
     header=True,
     inferSchema=True,
 )
