@@ -39,13 +39,13 @@ Cleanup: `./scripts/teardown.sh` (needs the same two env vars). It runs both bun
 
 **Two bundles, deployed in a fixed order.** The root `databricks.yml` creates the volume, the `build_tables` job, and the dashboard. `genie/databricks.yml` creates only the Genie space. They are separate because Databricks refuses to create a Genie space unless every table it references already exists, and on a fresh workspace those tables only exist after the job runs. Do not merge them.
 
-**Data path.** `hackathon-materials/` holds the two event CSVs as the only committed copies. `scripts/stage_data.sh` copies them into `resources/data/` (gitignored there); the team's own `nyc_population_by_zip.csv` is committed in `resources/data/` directly. CSVs are excluded from bundle sync and uploaded with `databricks fs cp` to the Unity Catalog volume `workspace.default.raw_data`. Never have notebooks read data from the `/Workspace` file mount: multi-MB reads there fail on some workspaces (FAILED_READ_FILE, or a 403 from blob storage even for plain Python reads).
+**Data path.** `hackathon-materials/` holds the two event CSVs as the only committed copies. `scripts/stage_data.sh` copies them into `resources/data/` (gitignored there); the team's own `nyc_population_by_zip.csv` and `nyc_zip_neighborhoods.csv` are committed in `resources/data/` directly. CSVs are excluded from bundle sync and uploaded with `databricks fs cp` to the Unity Catalog volume `workspace.default.raw_data`. Never have notebooks read data from the `/Workspace` file mount: multi-MB reads there fail on some workspaces (FAILED_READ_FILE, or a 403 from blob storage even for plain Python reads).
 
 **Pipeline** (`build_tables` job, two notebook tasks on serverless):
-1. `ingest_raw_data.py` reads the three CSVs from the volume (`data_dir` job parameter, defaulting to the volume path) and writes `workspace.default.{rat_sightings, restaurant_inspections, nyc_population_by_zip}`.
+1. `ingest_raw_data.py` reads the four CSVs from the volume (`data_dir` job parameter, defaulting to the volume path) and writes `workspace.default.{rat_sightings, restaurant_inspections, nyc_population_by_zip, nyc_zip_neighborhoods}`.
 2. `build_notebook.sql` builds five clean tables and `zip_service_gap_index`, then three views the exports depend on: `zip_lookup_v` and `borough_metric_shares_v` (dashboard), `rats_clean` (Genie). Cell 5 is the sanity check.
 
-`key_decisions_notebook.sql` is documentation only; nothing runs it.
+`key_decisions_notebook.sql` is documentation only; nothing runs it. `service_gap_map.py` is a plotly bubble map users run by hand after the job (README Step 9); it is synced but deliberately not a job task, because a figure in a job run has no viewer. It is the only reader of `nyc_zip_neighborhoods` (raw upload, `zip` is an int, so it pads on join). The original was authored in the Databricks UI and exported with `databricks workspace export --format SOURCE`; re-export the same way if it changes there.
 
 **Everything is hardcoded to `workspace.default`**: the notebooks, the dashboard datasets (each carries `catalog`/`schema`), the Genie data sources, the job parameter, and the volume path. Changing catalog or schema means a find-and-replace across all of them.
 
@@ -54,6 +54,8 @@ Cleanup: `./scripts/teardown.sh` (needs the same two env vars). It runs both bun
 ## Constraints that are not obvious from the code
 
 - SQL notebooks must have a `.sql` extension. With `.py`, the CLI treats `-- Databricks notebook source` files as plain files and refuses to run them as job tasks.
+- Serverless job compute ships an older plotly than interactive serverless notebooks. `go.Scattermap` needs plotly 5.24+, and `%pip install plotly` is a no-op when any version is present, so `service_gap_map.py` pins `"plotly>=5.24"`. A notebook that works in the UI can still fail as a one-off `databricks jobs submit` run for this reason. Such a run takes 10+ minutes on Free Edition, most of it environment setup.
+- Notebook outputs are not returned by `jobs get-run-output` unless the notebook calls `dbutils.notebook.exit`. To check the sanity cell after a job run, re-run its SQL through `POST /api/2.0/sql/statements` instead.
 - `mode: development` prefixes job, dashboard, and Genie names with `[dev <user>]` but does not prefix the volume name.
 - The root bundle sets `workspace.root_path` to `~/nyc_service_gap_index` so notebooks are findable from Home. The Genie bundle sets `parent_path` to the user's home for the same reason: anything created under the default hidden `.bundle/` path is missing from UI listings. Changing `root_path` recreates the dashboard (new URL).
 - `warehouse_id` deliberately has no default in either bundle so validate fails early with a clear message.

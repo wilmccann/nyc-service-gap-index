@@ -18,6 +18,8 @@ Built over two days at the **AI Hackathon + Networking NYC** (September 18–20,
 
 **A third dataset we added.** To make sense of rodent phone calls relative to population, the team pulled in `nyc_population_by_zip.csv` (Census ACS population estimates by ZIP, with margins of error) and committed it in `resources/data/`. It feeds the per-10,000-resident rates and the "quiet ZIP" flag for places where inspectors find rodents but residents rarely call. It was not part of the challenge materials, which is why it doesn't live in `hackathon-materials/`.
 
+**A fourth, added after the event.** `nyc_zip_neighborhoods.csv` (178 ZIPs grouped into the 42 NYC health department neighborhoods) gives the map notebook (Step 9) a neighborhood name to show next to each ZIP. It is also committed in `resources/data/`.
+
 ### Please read this before judging the code
 
 * **This is one team's solution, and it is imperfect.** It is what two people produced in two days, not a reference implementation. Some analytical choices are debatable and some code is rough. The [key decisions notebook](resources/notebooks/key_decisions_notebook.sql) documents the choices we made and why.
@@ -166,19 +168,19 @@ databricks bundle deploy   --target dev --var="warehouse_id=$WAREHOUSE_ID"
 
 > `--target dev` selects the `dev` environment defined in `databricks.yml`. It has nothing to do with the profile named `target`.
 
-Deploying takes about a minute. It creates the dashboard, the `build_tables` job, the three notebooks, and an empty Unity Catalog volume called `workspace.default.raw_data` for the data files. When it finishes you'll see something like this (the `Created` lines can appear in any order):
+Deploying takes about a minute. It creates the dashboard, the `build_tables` job, the four notebooks, and an empty Unity Catalog volume called `workspace.default.raw_data` for the data files. When it finishes you'll see something like this (the `Created` lines can appear in any order):
 
 ```
 Created volumes.raw_data
 Created jobs.build_tables
 Created dashboards.zip_service_gap_index
-Files: 6 uploaded, 0 deleted
+Files: 11 uploaded, 0 deleted
 Resources: 3 created, 0 changed, 0 deleted, 0 unchanged
 ```
 
 Everything lands in a folder called `nyc_service_gap_index` in your workspace home (**Workspace → Home → nyc_service_gap_index**). Because `dev` is a development target, the dashboard and job names get a `[dev <your name>]` prefix. That's expected.
 
-Now copy the two hackathon CSVs next to the population file, then upload all three into the volume. The copy is instant; the upload takes about 10 seconds:
+Now copy the two hackathon CSVs next to the two committed ones, then upload all four into the volume. The copy is instant; the upload takes about 10 seconds:
 
 ```bash
 ./scripts/stage_data.sh        # Windows PowerShell: .\scripts\stage_data.ps1
@@ -205,7 +207,7 @@ It prints a link to the run and then status lines. Expect about 4 minutes:
 
 The job has two steps:
 
-1. **ingest** reads the three CSVs you uploaded to the volume and creates the raw tables. It also creates the `workspace` catalog and `default` schema if they don't exist.
+1. **ingest** reads the four CSVs you uploaded to the volume and creates the raw tables. It also creates the `workspace` catalog and `default` schema if they don't exist.
 2. **build** transforms those into five clean tables, the final `zip_service_gap_index` table, and two views the dashboard reads.
 
 If the last line says `TERMINATED SUCCESS`, you're done with data. If it says `FAILED`, open the run link it printed; the failing step's error is shown there. See [Troubleshooting](#troubleshooting).
@@ -249,15 +251,26 @@ The dashboard has two pages:
 
 If the widgets are blank, click **Refresh** at the top of the dashboard. The SQL warehouse may take a minute to start.
 
+### Step 9 — Open the map (optional)
+
+The dashboard has no map, so a separate notebook draws one: every scored ZIP as a bubble on a street map, sized by its Service Gap Index and colored by how many 311 complaints it filed. The ten biggest gaps are labeled with their rank and ZIP.
+
+1. In Databricks, click **Workspace** in the left sidebar, then **Home**.
+2. Open `nyc_service_gap_index` → `files` → `resources` → `notebooks` → `service_gap_map`.
+3. At the top right, use the **Connect** dropdown to choose **Serverless**, then click **Run all**. It takes about a minute, most of it installing plotly.
+4. Scroll to the last cell. Hover a bubble for the ZIP's neighborhood, score, rank, component scores, complaint count, and restaurant citation rate.
+
+It reads only tables the job built in Step 6, so if it fails with a "table not found" error, finish Step 6 first.
+
 ---
 
 ## What you'll see when it's done
 
 These screenshots come from a fresh Free Edition account after following the steps above, so this is what success looks like.
 
-**Catalog.** Under **Catalog → workspace → default** you'll find the 3 raw tables, 5 clean tables, the index, 3 views, and the `raw_data` volume holding the CSVs.
+**Map of NYC** - Map shows relative service gap (bubble size) and 311 complaints (color) visualizations for each zip code.  
+![NYC Rodent Complaint & Restaurant Violation Map](docs/Map%20visualization%20of%20service%20gaps.png)
 
-![Catalog Explorer showing the tables, views, and raw_data volume](docs/screenshots/catalog-tables.png)
 
 **Dashboard, City overview page.** Headline numbers, the index by borough, resident reports vs. restaurant evidence, the collapse of auto-closing in April 2026, a borough summary, the scatter of 311 calls vs. citations, and the top and bottom 10 ZIPs.
 
@@ -270,6 +283,11 @@ These screenshots come from a fresh Free Edition account after following the ste
 **Genie space.** Ask questions in plain English. The space ships with 11 example questions and their SQL, plus 11 benchmark questions you can run from the **Benchmark** tab to check that answers stay accurate over time.
 
 ![Genie space answering questions about rodent complaints and quiet ZIP codes](docs/screenshots/genie-agent.png)
+
+**Catalog.** Under **Catalog → workspace → default** you'll find the 4 raw tables, 5 clean tables, the index, 3 views, and the `raw_data` volume holding the CSVs. (The screenshot predates the `nyc_zip_neighborhoods` raw table.)
+
+![Catalog Explorer showing the tables, views, and raw_data volume](docs/screenshots/catalog-tables.png)
+
 
 ---
 
@@ -311,16 +329,18 @@ These screenshots come from a fresh Free Edition account after following the ste
 | `resources/data/rat_sightings.csv` | NYC 311 rodent complaint records (50,954 rows). Not committed here; `scripts/stage_data.sh` copies it from `hackathon-materials/`. |
 | `resources/data/restaurant_inspections.csv` | NYC DOHMH restaurant inspection records (158,083 rows, one per violation). Not committed here; `scripts/stage_data.sh` copies it from `hackathon-materials/`. |
 | `resources/data/nyc_population_by_zip.csv` | The third dataset, added by the team: Census ACS population by ZIP with margin of error (231 rows). Committed here. |
-| `resources/notebooks/ingest_raw_data.py` | Reads the 3 CSVs from the `raw_data` volume and creates the raw tables |
+| `resources/data/nyc_zip_neighborhoods.csv` | The fourth dataset: 178 NYC ZIPs grouped into 42 neighborhoods, used only for labels on the map. Committed here. |
+| `resources/notebooks/ingest_raw_data.py` | Reads the 4 CSVs from the `raw_data` volume and creates the raw tables |
 | `resources/notebooks/build_notebook.sql` | SQL that transforms raw tables into clean tables, the final `zip_service_gap_index`, and the views the dashboard and Genie space use |
 | `resources/notebooks/key_decisions_notebook.sql` | Documentation notebook: 11 analytical decisions with validation queries |
+| `resources/notebooks/service_gap_map.py` | Interactive plotly bubble map of the index by ZIP (Step 9). Run by hand after the job; not part of it. |
 | `resources/dashboards/zip_service_gap_index_dashboard.json` | The NYC Service Gap Dashboard: two pages, 22 datasets, exported from the source workspace |
 
 ## Data pipeline overview
 
 ```
-hackathon-materials/*.csv  (the two event files)      resources/data/nyc_population_by_zip.csv  (added by the team)
-        │                                                        │
+hackathon-materials/*.csv  (the two event files)      resources/data/nyc_population_by_zip.csv   (added by the team)
+        │                                             resources/data/nyc_zip_neighborhoods.csv  (added for the map)
         ▼  scripts/stage_data.sh                                 │
 resources/data/*.csv  ◀──────────────────────────────────────────┘
         │
@@ -328,14 +348,16 @@ resources/data/*.csv  ◀──────────────────�
   volume workspace.default.raw_data
         │
         ▼  build_tables job, step 1: ingest_raw_data
-  3 raw tables in workspace.default
+  4 raw tables in workspace.default
         │
         ▼  build_tables job, step 2: build_notebook
   5 clean tables + zip_service_gap_index + 3 views
         │
         ├──▶  Dashboard reads zip_service_gap_index, rat_sightings, and two views
         │
-        └──▶  Genie space reads the clean tables, the index, and rats_clean
+        ├──▶  Genie space reads the clean tables, the index, and rats_clean
+        │
+        └──▶  service_gap_map notebook (run by hand) reads the index, rodent_complaints_clean, and nyc_zip_neighborhoods
 ```
 
 | Raw table (from CSV) | Clean table (build notebook creates) |
@@ -343,6 +365,7 @@ resources/data/*.csv  ◀──────────────────�
 | `rat_sightings` | `rodent_complaints_clean` |
 | `restaurant_inspections` | `restaurant_violations_clean` → `restaurants_clean` |
 | `nyc_population_by_zip` | `nyc_population_clean` |
+| `nyc_zip_neighborhoods` | (used as-is by the map notebook) |
 | | **`zip_service_gap_index`** (final output the dashboard reads) |
 | | `zip_lookup_v`, `borough_metric_shares_v` (views on top of the index for the dashboard) |
 | | `rats_clean` (typed view over raw complaints, used by the Genie space) |
@@ -362,10 +385,11 @@ The notebooks and dashboard hardcode `workspace.default`. If you can't use that 
 
    Then no code changes are needed.
 
-2. **Find-and-replace** `workspace.default` with your `catalog.schema` in these four files, then redeploy (Step 5):
+2. **Find-and-replace** `workspace.default` with your `catalog.schema` in these five files, then redeploy (Step 5):
    * `resources/notebooks/ingest_raw_data.py`
    * `resources/notebooks/build_notebook.sql`
    * `resources/notebooks/key_decisions_notebook.sql`
+   * `resources/notebooks/service_gap_map.py`
    * `resources/dashboards/zip_service_gap_index_dashboard.json`
 
 ## Redeploying after changes
@@ -380,7 +404,7 @@ To wipe everything this project created in a workspace and run the setup again f
 ./scripts/teardown.sh
 ```
 
-It removes the Genie space, the job, the dashboard, the `raw_data` volume and its files, all 11 tables and views in `workspace.default`, and the project's workspace folders. It leaves your SQL warehouse, the `workspace` catalog, and anything you created yourself. It takes about a minute. (Windows: run it from Git Bash, or run the two `databricks bundle destroy` commands it contains and drop the tables from the SQL Editor.)
+It removes the Genie space, the job, the dashboard, the `raw_data` volume and its files, all 12 tables and views in `workspace.default`, and the project's workspace folders. It leaves your SQL warehouse, the `workspace` catalog, and anything you created yourself. It takes about a minute. (Windows: run it from Git Bash, or run the two `databricks bundle destroy` commands it contains and drop the tables from the SQL Editor.)
 
 ---
 
