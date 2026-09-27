@@ -13,7 +13,7 @@
 # COMMAND ----------
 
 # DBTITLE 1,Install plotly
-# MAGIC %pip install "plotly>=5.24"
+# MAGIC %pip install plotly>=5.24
 
 # COMMAND ----------
 
