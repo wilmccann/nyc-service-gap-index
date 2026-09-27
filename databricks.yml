@@ -95,5 +95,6 @@ sync:
     - ./resources/notebooks/ingest_raw_data.py
     - ./resources/notebooks/build_notebook.sql
     - ./resources/notebooks/key_decisions_notebook.sql
+    - ./resources/notebooks/service_gap_map.py
     - ./resources/dashboards/zip_service_gap_index_dashboard.json
     - ./README.md

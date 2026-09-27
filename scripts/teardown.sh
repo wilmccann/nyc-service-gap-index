@@ -9,7 +9,7 @@
 #   ./scripts/teardown.sh
 #
 # Removes: the Genie space, the build_tables job, the dashboard, the raw_data
-# volume and its files, the 11 tables and views in workspace.default, and the
+# volume and its files, the 12 tables and views in workspace.default, and the
 # project's workspace folders (including ones left by older versions).
 # Leaves alone: the SQL warehouse, the workspace catalog and default schema,
 # and anything you created yourself.
@@ -58,7 +58,7 @@ for v in zip_lookup_v borough_metric_shares_v rats_clean; do
   sql "DROP VIEW IF EXISTS workspace.default.$v"
 done
 for t in zip_service_gap_index restaurants_clean restaurant_violations_clean rodent_complaints_clean \
-         nyc_population_clean rat_sightings restaurant_inspections nyc_population_by_zip; do
+         nyc_population_clean rat_sightings restaurant_inspections nyc_population_by_zip nyc_zip_neighborhoods; do
   sql "DROP TABLE IF EXISTS workspace.default.$t"
 done
 sql "DROP VOLUME IF EXISTS workspace.default.raw_data"
